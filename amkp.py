@@ -43,7 +43,7 @@ def plt_save_plot(plot_type, data, x, y, hue, order, folder):
     fname = os.path.join(folder, get_picname(x,y,hue,plot_type))
     plt.savefig(fname, dpi=300)
 
-def get_all_plots(data,folder):
+def get_all_plots(data,folder): # BP Diastolic, BP Systolic
     plt_save_plot('boxplot', data, 'age_group','BMI', None,
                     age_groups, folder)
     plt_save_plot('boxplot', data, 'gender','BMI', None,
@@ -53,13 +53,14 @@ def get_all_plots(data,folder):
     plt_save_plot('boxplot', data, 'age_group','BMI', 'gender',
                     age_groups, folder)
 
-    plt_save_plot('boxplot', data, 'age_group','BP Diastolic',
+def get_all_plots_for_bp(data,folder,diastolic, systolic):
+    plt_save_plot('boxplot', data, 'age_group',diastolic,
                     None, age_groups, folder)
-    plt_save_plot('boxplot', data, 'age_group','BP Systolic',
+    plt_save_plot('boxplot', data, 'age_group',systolic,
                     None, age_groups, folder)
-    plt_save_plot('boxplot', data, 'age_group','BP Diastolic',
+    plt_save_plot('boxplot', data, 'age_group',diastolic,
                     'gender', age_groups, folder)
-    plt_save_plot('boxplot', data, 'age_group','BP Systolic',
+    plt_save_plot('boxplot', data, 'age_group',systolic,
                     'gender', age_groups,folder)
 
 def get_baseline_bp(patient_number):
@@ -78,8 +79,8 @@ def get_baseline_bp(patient_number):
         return pd.Series({'baseline_systolic' : np.NaN,
                         'baseline_diastolic' : np.NaN})
     else:
-        return pd.Series({'baseline_diastolic':df_vital.loc[idx,'BP Diastolic'].values,
-                        'baseline_systolic':df_vital.loc[idx,'BP Systolic'].values})
+        return pd.Series({'baseline_diastolic':df_vital.loc[idx,'BP Diastolic'].iloc[0],
+                        'baseline_systolic':df_vital.loc[idx,'BP Systolic'].iloc[0]})
 
 if not os.path.exists('figures_whole_group'):
     os.mkdir('figures_whole_group')
@@ -88,18 +89,18 @@ if not os.path.exists('figures_not_null'):
     os.mkdir('figures_not_null')
 
 # build df_vital from sheet 'Vitals', df as basic dataframe
-df_vital = pd.read_excel('SR181549 Summary anonymized.xlsx',
+df_vital = pd.read_excel('random_data.xlsx',
                     sheet_name='Vitals', skiprows=3)
 df = df_vital.drop_duplicates(subset=['Patient no.'], keep = 'last')
 df = df.rename(index = df['Patient no.'])
 
 # build df_list from sheet 'List' to get patient gender
-df_list = pd.read_excel('SR181549 Summary anonymized.xlsx',
+df_list = pd.read_excel('random_data.xlsx',
                     sheet_name='List', skiprows=4)
 df_list = df_list.rename(index = df_list['Patient no.'])
 
 # build df_como for Comorbidities
-df_como = pd.read_excel('SR181549 Summary anonymized.xlsx',
+df_como = pd.read_excel('random_data.xlsx',
                     sheet_name='Comorbidities', skiprows=3)
 df_como = df_como.rename(index = df_como['Patient no.'])
 
@@ -128,6 +129,7 @@ df['BP Systolic'] = df['BP Systolic'].apply(clean_bp)
 
 # plot and save all boxplots and scatterplots required
 get_all_plots(df, 'figures_whole_group')
+get_all_plots_for_bp(df, 'figures_whole_group','BP Diastolic','BP Systolic')
 
 ## Get no of patient whose BP is in certain range
 # c = 0 # c for count, i for patient no.
@@ -156,3 +158,6 @@ df = pd.concat([df, baseline_bp], axis=1)
 df_notnull =  df[df['baseline_systolic'].notnull()]
 # plot and save all boxplots and scatterplots required
 get_all_plots(df_notnull, 'figures_not_null')
+get_all_plots_for_bp(df_notnull, 'figures_not_null','BP Diastolic','BP Systolic')
+get_all_plots_for_bp(df_notnull,
+                    'figures_not_null','baseline_diastolic','baseline_systolic')
