@@ -89,20 +89,24 @@ if not os.path.exists('figures_not_null'):
     os.mkdir('figures_not_null')
 
 # build df_vital from sheet 'Vitals', df as basic dataframe
-df_vital = pd.read_excel('random_data.xlsx',
+df_vital = pd.read_excel('SR181549 Summary anonymized.xlsx',
                     sheet_name='Vitals', skiprows=3)
 df = df_vital.drop_duplicates(subset=['Patient no.'], keep = 'last')
 df = df.rename(index = df['Patient no.'])
 
 # build df_list from sheet 'List' to get patient gender
-df_list = pd.read_excel('random_data.xlsx',
+df_list = pd.read_excel('SR181549 Summary anonymized.xlsx',
                     sheet_name='List', skiprows=4)
 df_list = df_list.rename(index = df_list['Patient no.'])
 
 # build df_como for Comorbidities
-df_como = pd.read_excel('random_data.xlsx',
+df_como = pd.read_excel('SR181549 Summary anonymized.xlsx',
                     sheet_name='Comorbidities', skiprows=3)
 df_como = df_como.rename(index = df_como['Patient no.'])
+
+# build df_drugs for Drugs
+df_drugs = pd.read_excel('SR181549 Summary anonymized.xlsx',
+                        sheet_name = 'Drugs',skiprows=3)
 
 # clean data with unit
 # clean bp in df_vital
@@ -161,3 +165,7 @@ get_all_plots(df_notnull, 'figures_not_null')
 get_all_plots_for_bp(df_notnull, 'figures_not_null','BP Diastolic','BP Systolic')
 get_all_plots_for_bp(df_notnull,
                     'figures_not_null','baseline_diastolic','baseline_systolic')
+
+### add variable drug to analysis drug effect
+# def get_drug_name(patient_number):
+#     idx = df_drugs['Patient no.'] == patient_number
