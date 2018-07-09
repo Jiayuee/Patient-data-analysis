@@ -26,7 +26,7 @@ def clean_bp(bp):
     return float(bp_numeric)
 
 def get_age_group(age):
-    return age_groups[int(age/(group_size))]
+    return age_groups[(int(age/(group_size)))-1]
 
 def get_picname(x,y,hue,plot_type):
     if hue == None:
@@ -34,7 +34,7 @@ def get_picname(x,y,hue,plot_type):
     else:
         return x +'_vs_'+ y +'_controling_'+ hue +'_'+ plot_type +'.png'
 
-def plt_save_plot(plot_type, data, x, y, hue, order, folder):
+def plt_save_basic_plot(plot_type, data, x, y, hue, order, folder):
     plt.figure()
     if plot_type == 'boxplot':
         sns.boxplot(x= x, y = y, hue = hue, data = data, order = order)
@@ -43,24 +43,55 @@ def plt_save_plot(plot_type, data, x, y, hue, order, folder):
     fname = os.path.join(folder, get_picname(x,y,hue,plot_type))
     plt.savefig(fname, dpi=300)
 
-def get_all_plots(data,folder): # BP Diastolic, BP Systolic
-    plt_save_plot('boxplot', data, 'age_group','BMI', None,
+def plt_save_bp_plot(plot_type, data, x, y, hue, order, folder):
+    plt.figure()
+    if plot_type == 'boxplot':
+        ax = sns.boxplot(x= x, y = y, hue = hue, data = data, order = order)
+        ax.set_title('Age Group vs ' + y)
+        ax.set(xlabel='Age Group', ylabel=y + ' [mmHg]')
+        if hue != None:
+            ax.legend(loc='upper right', title=None)
+        if y == 'BP Diastolic':
+            plt.plot([-1,5],[90,90],'--', linewidth = 0.5)
+        elif y == 'BP Systolic':
+            plt.plot([-1,6],[140,140],'--', linewidth = 0.5)
+        plt.plot([-1,6],[90,90],'--', linewidth = 0.5)
+    elif plot_type == 'swarmplot':
+        sns.swarmplot(x = x, y = y, hue = hue, data = data, order = order)
+    fname = os.path.join(folder, get_picname(x,y,hue,plot_type))
+    plt.savefig(fname, dpi=300)
+
+
+# plt.figure()
+# ax1 = sns.boxplot(x= 'age_group', y = 'BP Diastolic', hue = 'status',
+#             data = bp_before_and_after, order = age_groups)
+# ax1.set_title("Age Group vs BP Diastolic")
+# ax1.set(xlabel='Age Group', ylabel='BP Diastolic [mmHg]')
+# ax1.legend(loc='upper right', title=None)
+# plt.plot([-1,6],[90,90],'--', linewidth = 0.5)
+# fname = os.path.join('figures_not_null',
+#                     'Age Group vs BP Diastolic.png')
+# plt.savefig(fname, dpi=300)
+
+
+def get_basic_plots(data,folder): # BP Diastolic, BP Systolic
+    plt_save_basic_plot('boxplot', data, 'age_group','BMI', None,
                     age_groups, folder)
-    plt_save_plot('boxplot', data, 'gender','BMI', None,
+    plt_save_basic_plot('boxplot', data, 'gender','BMI', None,
                     None, folder)
-    plt_save_plot('swarmplot', data, 'age_group','BMI', 'gender',
+    plt_save_basic_plot('swarmplot', data, 'age_group','BMI', 'gender',
                     age_groups, folder)
-    plt_save_plot('boxplot', data, 'age_group','BMI', 'gender',
+    plt_save_basic_plot('boxplot', data, 'age_group','BMI', 'gender',
                     age_groups, folder)
 
-def get_all_plots_for_bp(data,folder,diastolic, systolic):
-    plt_save_plot('boxplot', data, 'age_group',diastolic,
+def get_plots_for_bp(data,folder,diastolic, systolic):
+    plt_save_bp_plot('boxplot', data, 'age_group', diastolic,
                     None, age_groups, folder)
-    plt_save_plot('boxplot', data, 'age_group',systolic,
+    plt_save_bp_plot('boxplot', data, 'age_group',systolic,
                     None, age_groups, folder)
-    plt_save_plot('boxplot', data, 'age_group',diastolic,
+    plt_save_bp_plot('boxplot', data, 'age_group',diastolic,
                     'gender', age_groups, folder)
-    plt_save_plot('boxplot', data, 'age_group',systolic,
+    plt_save_bp_plot('boxplot', data, 'age_group',systolic,
                     'gender', age_groups,folder)
 
 def get_baseline_bp(patient_number):
@@ -82,27 +113,53 @@ def get_baseline_bp(patient_number):
         return pd.Series({'baseline_diastolic':df_vital.loc[idx,'BP Diastolic'].iloc[0],
                         'baseline_systolic':df_vital.loc[idx,'BP Systolic'].iloc[0]})
 
+def get_baseline_ldl(patient_number):
+    ## baseline ldl is the 'LDL-C' on the day when hypertension was detected
+    idx1 = ldl['Patient no.'] == patient_number
+    try:
+        detection_date = df_como['Hypertension Detect Date'][patient_number]
+    except KeyError:
+        return np.NaN #patient no does not exist
+    idx2 = ldl['Lab Collection Calendar Date'] == detection_date
+    idx = idx1 & idx2
+    if idx.sum() == 0:
+        # this means detection date was before first Lab Collection Calendar Date
+        # or patient does not have a hypertension detect Date
+        return 'd' # detection date is not recorded
+    else:
+        return  ldl.loc[idx,'Test Result (Numeric)']
+        # return ldl.loc[idx,'Test Result (Numeric)'].iloc[0]
+
+
+
 if not os.path.exists('figures_whole_group'):
     os.mkdir('figures_whole_group')
 
 if not os.path.exists('figures_not_null'):
     os.mkdir('figures_not_null')
 
+if not os.path.exists('figures_LDL-C'):
+    os.mkdir('figures_LDL-C')
+
 # build df_vital from sheet 'Vitals', df as basic dataframe
-df_vital = pd.read_excel('random_data.xlsx',
+df_vital = pd.read_excel('SR181549 Summary anonymized.xlsx',
                     sheet_name='Vitals', skiprows=3)
 df = df_vital.drop_duplicates(subset=['Patient no.'], keep = 'last')
 df = df.rename(index = df['Patient no.'])
 
 # build df_list from sheet 'List' to get patient gender
-df_list = pd.read_excel('random_data.xlsx',
+df_list = pd.read_excel('SR181549 Summary anonymized.xlsx',
                     sheet_name='List', skiprows=4)
 df_list = df_list.rename(index = df_list['Patient no.'])
 
 # build df_como for Comorbidities
-df_como = pd.read_excel('random_data.xlsx',
+df_como = pd.read_excel('SR181549 Summary anonymized.xlsx',
                     sheet_name='Comorbidities', skiprows=3)
 df_como = df_como.rename(index = df_como['Patient no.'])
+
+# build df_lab from sheet 'Lab' to get lab tests
+df_lab = pd.read_excel('SR181549 Summary anonymized.xlsx',
+                        sheet_name='Lab', skiprows = 3)
 
 # build df_drugs for Drugs
 # df_drugs = pd.read_excel('SR181549 Summary anonymized.xlsx',
@@ -118,22 +175,25 @@ df['BMI'] = df['BMI'].apply(clean_bmi)
 
 ### add 'gender' variable into df
 df['gender'] = df_list['Gender']
+df.loc[df['gender'] == 'M','gender'] = 'Male'
+df.loc[df['gender'] == 'F','gender'] = 'female'
 
 ### add 'age' variable into df
 df['DOB'] = df_list['Patient DOB']
 df['age'] = (df['Reg Calendar Date'] - df['DOB']).dt.days/365
 
 group_size = 20
-age_groups = ['0-20','20-40', '40-60', '60-80', '80-100']
+age_groups = ['20-40 years old', '40-60 years old',
+                '60-80 years old', '80-100 years old']
 df['age_group'] = df['age'].apply(get_age_group)
 
 ### add BP into df
 df['BP Diastolic'] = df['BP Diastolic'].apply(clean_bp)
 df['BP Systolic'] = df['BP Systolic'].apply(clean_bp)
 
-# plot and save all boxplots and scatterplots required
-get_all_plots(df, 'figures_whole_group')
-get_all_plots_for_bp(df, 'figures_whole_group','BP Diastolic','BP Systolic')
+## plot and save all boxplots and scatterplots required
+# get_basic_plots(df, 'figures_whole_group')
+# get_plots_for_bp(df, 'figures_whole_group','BP Diastolic','BP Systolic')
 
 ## Get no of patient whose BP is in certain range
 # c = 0 # c for count, i for patient no.
@@ -143,61 +203,80 @@ get_all_plots_for_bp(df, 'figures_whole_group','BP Diastolic','BP Systolic')
 #             c +=1
 # print(c)
 
-## Check if data in vital is ascending order by date and patient no
-# o1 = 0 # no of wrong order in date
-# o2 = 0 # no of wrong order in patient no
-# for i in range(0, len(df_vital)-1):
-#     if df_vital['Patient no.'][i] == df_vital['Patient no.'][i+1]:
-#         if df_vital['Reg Calendar Date'][i] > df_vital['Reg Calendar Date'][i+1]:
-#             o +=1
-#     if df_vital['Patient no.'][i] > df_vital['Patient no.'][i+1]:
-#         o2+=1
-# print(o1,o2)
-
 ### add 'BP Diastolic before' as BP before drug from BP at hypertension detect date
-baseline_bp = df['Patient no.'].apply(get_baseline_bp)
-df = pd.concat([df, baseline_bp], axis=1)
+baseline_bp_all = df['Patient no.'].apply(get_baseline_bp)
+df = pd.concat([df, baseline_bp_all], axis=1)
 
 # define df_notnull for patient whose BP before drug is recorded
 df_notnull =  df[df['baseline_systolic'].notnull()]
-# plot and save all boxplots and scatterplots required
-get_all_plots(df_notnull, 'figures_not_null')
-get_all_plots_for_bp(df_notnull, 'figures_not_null','BP Diastolic','BP Systolic')
-get_all_plots_for_bp(df_notnull,
-                    'figures_not_null','baseline_diastolic','baseline_systolic')
+## plot and save all boxplots and scatterplots required
+# get_basic_plots(df_notnull, 'figures_not_null')
+# get_plots_for_bp(df_notnull, 'figures_not_null','BP Diastolic','BP Systolic')
+# get_plots_for_bp(df_notnull, 'figures_not_null','baseline_diastolic',
+#                 'baseline_systolic')
 # plot grouped boxplot to compare BP before and after drug
-bp_before = df_notnull.copy()
-bp_before['status'] = 'before'
-bp_before['BP Diastolic'] = bp_before['baseline_diastolic']
-bp_before['BP Systolic'] = bp_before['baseline_systolic']
-bp_after = df_notnull.copy()
-bp_after['status'] = 'after'
-bp_before_and_after = bp_before.append(bp_after)
-# plt_save_plot('boxplot', bp_before_and_after, 'age_group', 'BP Diastolic',
-#                 'status', age_groups, 'figures_not_null')
-# plt.plot([-1,6],[90,90],'--')
-# plt_save_plot('boxplot', bp_before_and_after, 'age_group', 'BP Systolic',
-#                 'status', age_groups, 'figures_not_null')
-# plt.plot([-1,6],[140,140],'--')
+baseline_bp = df_notnull.copy()
+baseline_bp['BP record'] = 'Baseline BP'
+baseline_bp['BP Diastolic'] = baseline_bp['baseline_diastolic']
+baseline_bp['BP Systolic'] = baseline_bp['baseline_systolic']
+latest_bp = df_notnull.copy()
+latest_bp['BP record'] = 'Latest BP'
+baseline_and_latest_bp = baseline_bp.append(latest_bp)
 
-plt.figure()
-sns.boxplot(x= 'age_group', y = 'BP Diastolic', hue = 'status',
-            data = bp_before_and_after, order = age_groups)
-plt.plot([-1,6],[90,90],'--')
-fname = os.path.join('figures_not_null',
-                    'age_group_vs_BPD_vs_status_boxplot_with_dot_line.png')
-plt.savefig(fname, dpi=300)
+## Plot boxplots to compare baseline BP and present BP
+# plt_save_bp_plot('boxplot', baseline_and_latest_bp, 'age_group', 'BP Diastolic',
+#                  'BP record', age_groups, 'figures_not_null')
+# plt_save_bp_plot('boxplot', baseline_and_latest_bp, 'age_group', 'BP Systolic',
+#                  'BP record', age_groups, 'figures_not_null')
 
-plt.figure()
-sns.boxplot(x= 'age_group', y = 'BP Systolic', hue = 'status',
-            data = bp_before_and_after, order = age_groups)
-plt.plot([-1,6],[140,140],'--')
-fname = os.path.join('figures_not_null',
-                    'age_group_vs_BPD_vs_status_boxplot_with_dot_line.png')
-plt.savefig(fname, dpi=300)
+### add variable 'lab_test', select patient who did the 5 tests
+# 5 tests: Cholesterol, Chol : HDL Ratio, HDL-C, Triglycerides, LDL-C
+lab_tests = ['Cholesterol','Chol : HDL Ratio','HDL-C','Triglycerides','LDL-C']
+lab_idx = df_lab['Lab Test Desc'] == 'LDL-C'
+ldl = df_lab[lab_idx].copy()
 
+# ldl['Patient no.'].value_counts()
+# Output: 490   (only 490 patients takes 'LDL-C' out of 510 patients)
+# 96.1% cat A patients have 'LDL-C' record
 
+sub_ldl = ldl.drop_duplicates(subset=['Patient no.'], keep = 'last')
+sub_ldl['baseline_ldl'] = sub_ldl['Patient no.'].apply(get_baseline_ldl)
+sub_ldl = sub_ldl.rename(columns = {'Test Result (Numeric)':'Latest LDL'})
+sub_ldl['first_ldl'] = ldl.drop_duplicates(subset=['Patient no.'],
+                        keep = 'first')['Test Result (Numeric)']
+sub_ldl['first_ldl_date'] = ldl.drop_duplicates(subset=['Patient no.'],
+                        keep = 'first')['Lab Collection Calendar Date']
 
-### add variable drug to analysis drug effect
-# def get_drug_name(patient_number):
-#     idx = df_drugs['Patient no.'] == patient_number
+# sub_ldl['Baseline LDL'].value_counts()
+# output: d:382, np.NaN:102, others:6
+# 170/510 : no hypertension detect Date
+# 382/490 : no match for detection Date
+# 367 patients have more than one LDL test recorded
+#     sum(ldl['Patient no.'].value_counts()>1)
+# How many patients' detect date before first LDL test Date?
+
+ldl_idx = df_como['Patient no.'].isin(sub_ldl['Patient no.'])
+sub_como = pd.DataFrame(df_como[ldl_idx].copy())
+# i1 = sub_ldl['Patient no.'] == (sub_como['Patient no.'])
+#
+# i2 = sub_ldl['first_ldl_date'] > sub_como['Hypertension Detect Date']
+# i12 = i1 & i2
+# sum(sub_ldl[i12])
+# sub_ldl = sub_ldl.sort_values('Patient no.')
+# sub_ldl = sub_ldl.reset_index(drop = True)
+# sub_como = sub_como.reset_index(drop = True)
+
+sorted_sub_ldl = sorted(sub_ldl, key=lambda x: x.get("Patient no.", ""))
+sub_ldl = sub_ldl.sort_values('Patient no.')
+# c = 0
+# for i in sub_ldl['Patient no.']:
+#     i1 = sub_ldl['Patient no.'] == i
+#     i2 = sub_como['Patient no.'] == i
+#     ldl = sub_ldl.loc[i1,'first_ldl_date'].iloc[0]
+#     detect = sub_como.loc[i2,'Hypertension Detect Date'].iloc[0]
+#     print(ldl,detect)
+#     if ldl > detect:
+#         c += 1
+# How many patients' detect date between two LDL tests?
+
+# How many patients' hypertension detect date are missing? 102
