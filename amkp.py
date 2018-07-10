@@ -94,6 +94,13 @@ def get_plots_for_bp(data,folder,diastolic, systolic):
     plt_save_bp_plot('boxplot', data, 'age_group',systolic,
                     'gender', age_groups,folder)
 
+def get_plots_for_ldl(data,folder,ldl):
+    plt_save_basic_plot('boxplot', data, 'age_group', ldl,
+                    None, age_groups, folder)
+    plt_save_basic_plot('boxplot', data, 'age_group',ldl,
+                    'gender', age_groups, folder)
+
+
 def get_baseline_bp(patient_number):
     ## baseline bp is the bp on the day when  hypertension was detected
     idx1 = df_vital['Patient no.'] == patient_number
@@ -130,7 +137,10 @@ def get_baseline_ldl(patient_number):
         return  ldl.loc[idx,'Test Result (Numeric)']
         # return ldl.loc[idx,'Test Result (Numeric)'].iloc[0]
 
-
+def get_age_and_gender(patient_number):
+    idx = ldl['Patient no.'] == patient_number
+    return pd.Series({'Age Group':df_vital.loc[idx,'age_group'].iloc[0],
+                    'Gender':df_vital.loc[idx,'gender'].iloc[0]})
 
 if not os.path.exists('figures_whole_group'):
     os.mkdir('figures_whole_group')
@@ -240,7 +250,7 @@ ldl = df_lab[lab_idx].copy()
 # 96.1% cat A patients have 'LDL-C' record
 
 sub_ldl = ldl.drop_duplicates(subset=['Patient no.'], keep = 'last')
-sub_ldl['baseline_ldl'] = sub_ldl['Patient no.'].apply(get_baseline_ldl)
+sub_ldl['Baseline LDL'] = sub_ldl['Patient no.'].apply(get_baseline_ldl)
 sub_ldl = sub_ldl.rename(columns = {'Test Result (Numeric)':'Latest LDL'})
 # sub_ldl['first_ldl'] = ldl.drop_duplicates(subset=['Patient no.'],
 #                         keep = 'first')['Test Result (Numeric)']
@@ -280,3 +290,17 @@ sub_ldl = sub_ldl.rename(columns = {'Test Result (Numeric)':'Latest LDL'})
 # How many patients' detect date between two LDL tests?
 
 # How many patients' hypertension detect date are missing? 102
+ldl_notnull =  sub_ldl[sub_ldl['Baseline LDL'].notnull()]
+age_and_gender = ldl_notnull['Patient no.'].apply(get_age_and_gender)
+ldl_notnull = pd.concat([ldl_notnull, age_and_gender], axis=1)
+get_basic_plots(ldl_notnull, 'figures_LDL-C')
+get_plots_for_ldl(ldl_notnull,'figures_LDL-C','Baseline LDL')
+get_plots_for_ldl(ldl_notnull,'figures_LDL-C','Latest LDL')
+baseline_ldl = ldl_notnull.copy()
+baseline_ldl['Latest LDL'] = baseline_ldl['Baseline LDL']
+baseline_ldl['LDL record'] = 'Baseline'
+latest_bp = ldl_notnull.copy()
+latest_bp['LDL record'] = 'Latest'
+baseline_and_latest_ldl = baseline_ldl.append(latest_ldl)
+plt_save_basic_plot('boxplot', baseline_and_latest_ldl, 'age_group', 'Latest LDL',
+                 'LDL record', age_groups, 'figures_LDL-C')
