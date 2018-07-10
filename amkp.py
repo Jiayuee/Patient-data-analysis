@@ -37,7 +37,12 @@ def get_picname(x,y,hue,plot_type):
 def plt_save_basic_plot(plot_type, data, x, y, hue, order, folder):
     plt.figure()
     if plot_type == 'boxplot':
-        sns.boxplot(x= x, y = y, hue = hue, data = data, order = order)
+        ax = sns.boxplot(x= x, y = y, hue = hue, data = data, order = order)
+        if x == 'age_group':
+            ax.set_title('Age Group vs '+y)
+            ax.set(xlabel='Age Group', ylabel=y)
+        if hue != None:
+            ax.legend(loc='upper right', title=None)
     elif plot_type == 'swarmplot':
         sns.swarmplot(x = x, y = y, hue = hue, data = data, order = order)
     fname = os.path.join(folder, get_picname(x,y,hue,plot_type))
@@ -126,21 +131,22 @@ def get_baseline_ldl(patient_number):
     try:
         detection_date = df_como['Dyslipidaemia Detect Date'][patient_number]
     except KeyError:
-        return np.NaN #patient no does not exist
+        return pd.Series({'baseline_ldl' : np.NaN}) #patient no does not exist
     idx2 = ldl['Lab Collection Calendar Date'] == detection_date
     idx = idx1 & idx2
     if idx.sum() == 0:
         # this means detection date was before first Lab Collection Calendar Date
         # or patient does not have a hypertension detect Date
-        return 'd' # detection date is not recorded
+        return pd.Series({'baseline_ldl' : np.NaN}) # detection date is not recorded
     else:
-        return  ldl.loc[idx,'Test Result (Numeric)']
+        return  pd.Series({'baseline_ldl':ldl.loc[idx,'Test Result (Numeric)'].iloc[0]})
         # return ldl.loc[idx,'Test Result (Numeric)'].iloc[0]
 
-def get_age_and_gender(patient_number):
-    idx = ldl['Patient no.'] == patient_number
-    return pd.Series({'Age Group':df_vital.loc[idx,'age_group'].iloc[0],
-                    'Gender':df_vital.loc[idx,'gender'].iloc[0]})
+def get_age_gender_bmi(patient_number):
+    idx = df['Patient no.'] == patient_number
+    return pd.Series({'age_group':df.loc[idx,'age_group'].iloc[0],
+                    'gender':df.loc[idx,'gender'].iloc[0],
+                    'BMI':df.loc[idx,'BMI'].iloc[0]})
 
 if not os.path.exists('figures_whole_group'):
     os.mkdir('figures_whole_group')
@@ -152,23 +158,23 @@ if not os.path.exists('figures_LDL-C'):
     os.mkdir('figures_LDL-C')
 
 # build df_vital from sheet 'Vitals', df as basic dataframe
-df_vital = pd.read_excel('random_data.xlsx',
+df_vital = pd.read_excel('SR181549 Summary anonymized.xlsx',
                     sheet_name='Vitals', skiprows=3)
 df = df_vital.drop_duplicates(subset=['Patient no.'], keep = 'last')
 df = df.rename(index = df['Patient no.'])
 
 # build df_list from sheet 'List' to get patient gender
-df_list = pd.read_excel('random_data.xlsx',
+df_list = pd.read_excel('SR181549 Summary anonymized.xlsx',
                     sheet_name='List', skiprows=4)
 df_list = df_list.rename(index = df_list['Patient no.'])
 
 # build df_como for Comorbidities
-df_como = pd.read_excel('random_data.xlsx',
+df_como = pd.read_excel('SR181549 Summary anonymized.xlsx',
                     sheet_name='Comorbidities', skiprows=3)
 df_como = df_como.rename(index = df_como['Patient no.'])
 
 # build df_lab from sheet 'Lab' to get lab tests
-df_lab = pd.read_excel('random_data.xlsx',
+df_lab = pd.read_excel('SR181549 Summary anonymized.xlsx',
                         sheet_name='Lab', skiprows = 3)
 
 # build df_drugs for Drugs
@@ -245,62 +251,23 @@ baseline_and_latest_bp = baseline_bp.append(latest_bp)
 lab_idx = df_lab['Lab Test Desc'] == 'LDL-C'
 ldl = df_lab[lab_idx].copy()
 
-# ldl['Patient no.'].value_counts()
-# Output: 490   (only 490 patients takes 'LDL-C' out of 510 patients)
-# 96.1% cat A patients have 'LDL-C' record
-
 sub_ldl = ldl.drop_duplicates(subset=['Patient no.'], keep = 'last')
-sub_ldl['Baseline LDL'] = sub_ldl['Patient no.'].apply(get_baseline_ldl)
-sub_ldl = sub_ldl.rename(columns = {'Test Result (Numeric)':'Latest LDL'})
-# sub_ldl['first_ldl'] = ldl.drop_duplicates(subset=['Patient no.'],
-#                         keep = 'first')['Test Result (Numeric)']
-# sub_ldl['first_ldl_date'] = ldl.drop_duplicates(subset=['Patient no.'],
-#                         keep = 'first')['Lab Collection Calendar Date']
-
-# sub_ldl['Baseline LDL'].value_counts()
-# output: d:382, np.NaN:102, others:6
-# 170/510 : no hypertension detect Date
-# 382/490 : no match for detection Date
-# 367 patients have more than one LDL test recorded
-#     sum(ldl['Patient no.'].value_counts()>1)
-# How many patients' detect date before first LDL test Date?
-
-# ldl_idx = df_como['Patient no.'].isin(sub_ldl['Patient no.'])
-# sub_como = pd.DataFrame(df_como[ldl_idx].copy())
-# i1 = sub_ldl['Patient no.'] == (sub_como['Patient no.'])
-#
-# i2 = sub_ldl['first_ldl_date'] > sub_como['Hypertension Detect Date']
-# i12 = i1 & i2
-# sum(sub_ldl[i12])
-# sub_ldl = sub_ldl.sort_values('Patient no.')
-# sub_ldl = sub_ldl.reset_index(drop = True)
-# sub_como = sub_como.reset_index(drop = True)
-
-# sorted_sub_ldl = sorted(sub_ldl, key=lambda x: x.get("Patient no.", ""))
-# sub_ldl = sub_ldl.sort_values('Patient no.')
-# c = 0
-# for i in sub_ldl['Patient no.']:
-#     i1 = sub_ldl['Patient no.'] == i
-#     i2 = sub_como['Patient no.'] == i
-#     ldl = sub_ldl.loc[i1,'first_ldl_date'].iloc[0]
-#     detect = sub_como.loc[i2,'Hypertension Detect Date'].iloc[0]
-#     print(ldl,detect)
-#     if ldl > detect:
-#         c += 1
-# How many patients' detect date between two LDL tests?
-
-# How many patients' hypertension detect date are missing? 102
-ldl_notnull =  sub_ldl[sub_ldl['Baseline LDL'].notnull()]
-age_and_gender = ldl_notnull['Patient no.'].apply(get_age_and_gender)
-ldl_notnull = pd.concat([ldl_notnull, age_and_gender], axis=1)
+sub_ldl['baseline_ldl'] = sub_ldl['Patient no.'].apply(get_baseline_ldl)
+ldl_notnull =  sub_ldl[sub_ldl['baseline_ldl'].notnull()]
+ldl_notnull = ldl_notnull.rename(columns = {'Test Result (Numeric)':'latest_ldl'})
+age_gender_bmi = ldl_notnull['Patient no.'].apply(get_age_gender_bmi)
+ldl_notnull['age_group'] = age_gender_bmi['age_group']
+ldl_notnull['gender'] = age_gender_bmi['gender']
+ldl_notnull['BMI'] = age_gender_bmi['BMI']
 get_basic_plots(ldl_notnull, 'figures_LDL-C')
-get_plots_for_ldl(ldl_notnull,'figures_LDL-C','Baseline LDL')
-get_plots_for_ldl(ldl_notnull,'figures_LDL-C','Latest LDL')
+get_plots_for_ldl(ldl_notnull,'figures_LDL-C','baseline_ldl')
+get_plots_for_ldl(ldl_notnull,'figures_LDL-C','latest_ldl')
 baseline_ldl = ldl_notnull.copy()
-baseline_ldl['Latest LDL'] = baseline_ldl['Baseline LDL']
+baseline_ldl['LDL'] = baseline_ldl['baseline_ldl']
 baseline_ldl['LDL record'] = 'Baseline'
-latest_bp = ldl_notnull.copy()
-latest_bp['LDL record'] = 'Latest'
+latest_ldl = ldl_notnull.copy()
+latest_ldl['LDL'] = latest_ldl['latest_ldl']
+latest_ldl['LDL record'] = 'Latest'
 baseline_and_latest_ldl = baseline_ldl.append(latest_ldl)
-plt_save_basic_plot('boxplot', baseline_and_latest_ldl, 'age_group', 'Latest LDL',
+plt_save_basic_plot('boxplot', baseline_and_latest_ldl, 'age_group', 'LDL',
                  'LDL record', age_groups, 'figures_LDL-C')
