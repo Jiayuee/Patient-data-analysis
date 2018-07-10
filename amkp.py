@@ -117,7 +117,7 @@ def get_baseline_ldl(patient_number):
     ## baseline ldl is the 'LDL-C' on the day when hypertension was detected
     idx1 = ldl['Patient no.'] == patient_number
     try:
-        detection_date = df_como['Hypertension Detect Date'][patient_number]
+        detection_date = df_como['Dyslipidaemia Detect Date'][patient_number]
     except KeyError:
         return np.NaN #patient no does not exist
     idx2 = ldl['Lab Collection Calendar Date'] == detection_date
@@ -142,23 +142,23 @@ if not os.path.exists('figures_LDL-C'):
     os.mkdir('figures_LDL-C')
 
 # build df_vital from sheet 'Vitals', df as basic dataframe
-df_vital = pd.read_excel('SR181549 Summary anonymized.xlsx',
+df_vital = pd.read_excel('random_data.xlsx',
                     sheet_name='Vitals', skiprows=3)
 df = df_vital.drop_duplicates(subset=['Patient no.'], keep = 'last')
 df = df.rename(index = df['Patient no.'])
 
 # build df_list from sheet 'List' to get patient gender
-df_list = pd.read_excel('SR181549 Summary anonymized.xlsx',
+df_list = pd.read_excel('random_data.xlsx',
                     sheet_name='List', skiprows=4)
 df_list = df_list.rename(index = df_list['Patient no.'])
 
 # build df_como for Comorbidities
-df_como = pd.read_excel('SR181549 Summary anonymized.xlsx',
+df_como = pd.read_excel('random_data.xlsx',
                     sheet_name='Comorbidities', skiprows=3)
 df_como = df_como.rename(index = df_como['Patient no.'])
 
 # build df_lab from sheet 'Lab' to get lab tests
-df_lab = pd.read_excel('SR181549 Summary anonymized.xlsx',
+df_lab = pd.read_excel('random_data.xlsx',
                         sheet_name='Lab', skiprows = 3)
 
 # build df_drugs for Drugs
@@ -231,7 +231,7 @@ baseline_and_latest_bp = baseline_bp.append(latest_bp)
 
 ### add variable 'lab_test', select patient who did the 5 tests
 # 5 tests: Cholesterol, Chol : HDL Ratio, HDL-C, Triglycerides, LDL-C
-lab_tests = ['Cholesterol','Chol : HDL Ratio','HDL-C','Triglycerides','LDL-C']
+# lab_tests = ['Cholesterol','Chol : HDL Ratio','HDL-C','Triglycerides','LDL-C']
 lab_idx = df_lab['Lab Test Desc'] == 'LDL-C'
 ldl = df_lab[lab_idx].copy()
 
@@ -242,10 +242,10 @@ ldl = df_lab[lab_idx].copy()
 sub_ldl = ldl.drop_duplicates(subset=['Patient no.'], keep = 'last')
 sub_ldl['baseline_ldl'] = sub_ldl['Patient no.'].apply(get_baseline_ldl)
 sub_ldl = sub_ldl.rename(columns = {'Test Result (Numeric)':'Latest LDL'})
-sub_ldl['first_ldl'] = ldl.drop_duplicates(subset=['Patient no.'],
-                        keep = 'first')['Test Result (Numeric)']
-sub_ldl['first_ldl_date'] = ldl.drop_duplicates(subset=['Patient no.'],
-                        keep = 'first')['Lab Collection Calendar Date']
+# sub_ldl['first_ldl'] = ldl.drop_duplicates(subset=['Patient no.'],
+#                         keep = 'first')['Test Result (Numeric)']
+# sub_ldl['first_ldl_date'] = ldl.drop_duplicates(subset=['Patient no.'],
+#                         keep = 'first')['Lab Collection Calendar Date']
 
 # sub_ldl['Baseline LDL'].value_counts()
 # output: d:382, np.NaN:102, others:6
@@ -255,8 +255,8 @@ sub_ldl['first_ldl_date'] = ldl.drop_duplicates(subset=['Patient no.'],
 #     sum(ldl['Patient no.'].value_counts()>1)
 # How many patients' detect date before first LDL test Date?
 
-ldl_idx = df_como['Patient no.'].isin(sub_ldl['Patient no.'])
-sub_como = pd.DataFrame(df_como[ldl_idx].copy())
+# ldl_idx = df_como['Patient no.'].isin(sub_ldl['Patient no.'])
+# sub_como = pd.DataFrame(df_como[ldl_idx].copy())
 # i1 = sub_ldl['Patient no.'] == (sub_como['Patient no.'])
 #
 # i2 = sub_ldl['first_ldl_date'] > sub_como['Hypertension Detect Date']
@@ -266,8 +266,8 @@ sub_como = pd.DataFrame(df_como[ldl_idx].copy())
 # sub_ldl = sub_ldl.reset_index(drop = True)
 # sub_como = sub_como.reset_index(drop = True)
 
-sorted_sub_ldl = sorted(sub_ldl, key=lambda x: x.get("Patient no.", ""))
-sub_ldl = sub_ldl.sort_values('Patient no.')
+# sorted_sub_ldl = sorted(sub_ldl, key=lambda x: x.get("Patient no.", ""))
+# sub_ldl = sub_ldl.sort_values('Patient no.')
 # c = 0
 # for i in sub_ldl['Patient no.']:
 #     i1 = sub_ldl['Patient no.'] == i
