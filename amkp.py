@@ -157,24 +157,27 @@ if not os.path.exists('figures_not_null'):
 if not os.path.exists('figures_LDL-C'):
     os.mkdir('figures_LDL-C')
 
+if not os.path.exists('figures_hba1c'):
+    os.mkdir('figures_hba1c')
+
 # build df_vital from sheet 'Vitals', df as basic dataframe
-df_vital = pd.read_excel('SR181549 Summary anonymized.xlsx',
+df_vital = pd.read_excel('random_data.xlsx',
                     sheet_name='Vitals', skiprows=3)
 df = df_vital.drop_duplicates(subset=['Patient no.'], keep = 'last')
 df = df.rename(index = df['Patient no.'])
 
 # build df_list from sheet 'List' to get patient gender
-df_list = pd.read_excel('SR181549 Summary anonymized.xlsx',
+df_list = pd.read_excel('random_data.xlsx',
                     sheet_name='List', skiprows=4)
 df_list = df_list.rename(index = df_list['Patient no.'])
 
 # build df_como for Comorbidities
-df_como = pd.read_excel('SR181549 Summary anonymized.xlsx',
+df_como = pd.read_excel('random_data.xlsx',
                     sheet_name='Comorbidities', skiprows=3)
 df_como = df_como.rename(index = df_como['Patient no.'])
 
 # build df_lab from sheet 'Lab' to get lab tests
-df_lab = pd.read_excel('SR181549 Summary anonymized.xlsx',
+df_lab = pd.read_excel('random_data.xlsx',
                         sheet_name='Lab', skiprows = 3)
 
 # build df_drugs for Drugs
@@ -245,23 +248,30 @@ baseline_and_latest_bp = baseline_bp.append(latest_bp)
 # plt_save_bp_plot('boxplot', baseline_and_latest_bp, 'age_group', 'BP Systolic',
 #                  'BP record', age_groups, 'figures_not_null')
 
-### add variable 'lab_test', select patient who did the 5 tests
-# 5 tests: Cholesterol, Chol : HDL Ratio, HDL-C, Triglycerides, LDL-C
-# lab_tests = ['Cholesterol','Chol : HDL Ratio','HDL-C','Triglycerides','LDL-C']
-lab_idx = df_lab['Lab Test Desc'] == 'LDL-C'
-ldl = df_lab[lab_idx].copy()
+### add variable 'ldl'
+ldl_idx = df_lab['Lab Test Desc'] == 'LDL-C'
+ldl = df_lab[ldl_idx].copy()
 
+# sub_ldl: without duplicates
 sub_ldl = ldl.drop_duplicates(subset=['Patient no.'], keep = 'last')
 sub_ldl['baseline_ldl'] = sub_ldl['Patient no.'].apply(get_baseline_ldl)
+
+# ldl_notnull: drop null values
 ldl_notnull =  sub_ldl[sub_ldl['baseline_ldl'].notnull()]
 ldl_notnull = ldl_notnull.rename(columns = {'Test Result (Numeric)':'latest_ldl'})
+
+# add basic info for ldl_notnull
 age_gender_bmi = ldl_notnull['Patient no.'].apply(get_age_gender_bmi)
 ldl_notnull['age_group'] = age_gender_bmi['age_group']
 ldl_notnull['gender'] = age_gender_bmi['gender']
 ldl_notnull['BMI'] = age_gender_bmi['BMI']
+
+# basi plot: distribution
 get_basic_plots(ldl_notnull, 'figures_LDL-C')
 get_plots_for_ldl(ldl_notnull,'figures_LDL-C','baseline_ldl')
 get_plots_for_ldl(ldl_notnull,'figures_LDL-C','latest_ldl')
+
+# plots for ldl: comparision with baseline
 baseline_ldl = ldl_notnull.copy()
 baseline_ldl['LDL'] = baseline_ldl['baseline_ldl']
 baseline_ldl['LDL record'] = 'Baseline'
@@ -271,3 +281,26 @@ latest_ldl['LDL record'] = 'Latest'
 baseline_and_latest_ldl = baseline_ldl.append(latest_ldl)
 plt_save_basic_plot('boxplot', baseline_and_latest_ldl, 'age_group', 'LDL',
                  'LDL record', age_groups, 'figures_LDL-C')
+
+### add variable 'hba1c'
+hba1c_idx = df_lab['Lab Test Desc'] == 'HbA1c'
+hba1c = df_lab[hba1c_idx].copy()
+
+# sub_hba1c: drop duplicates
+sub_hba1c = hba1c.drop_duplicates(subset=['Patient no.'], keep = 'last')
+
+# hba1c_notnull: drop null values
+hba1c_notnull =  sub_hba1c[sub_hba1c['Test Result (Numeric)'].notnull()]
+hba1c_notnull = hba1c_notnull.rename(columns = {'Test Result (Numeric)':'Latest hba1c'})
+
+# add basic info for hba1c_notnull
+age_gender_bmi = hba1c_notnull['Patient no.'].apply(get_age_gender_bmi)
+hba1c_notnull['age_group'] = age_gender_bmi['age_group']
+hba1c_notnull['gender'] = age_gender_bmi['gender']
+hba1c_notnull['BMI'] = age_gender_bmi['BMI']
+
+# basi plot: distribution
+get_basic_plots(hba1c_notnull, 'figures_hba1c')
+get_plots_for_ldl(hba1c_notnull,'figures_hba1c','Latest hba1c')
+
+######## ONLY 6 PATIENT HAVE TAKEN HBA1C TEST!!!!!!!! #########
