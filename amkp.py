@@ -30,9 +30,9 @@ def get_age_group(age):
 
 def get_picname(x,y,hue,plot_type):
     if hue == None:
-        return x +'_vs_'+ y +'_'+ plot_type + '.png'
+        return x +' vs '+ y +' '+ plot_type + '.png'
     else:
-        return x +'_vs_'+ y +'_controling_'+ hue +'_'+ plot_type +'.png'
+        return x +' vs '+ y +' controling '+ hue +' '+ plot_type +'.png'
 
 def plt_save_basic_plot(plot_type, data, x, y, hue, order, folder):
     plt.figure()
@@ -135,6 +135,16 @@ def get_age_gender_bmi(patient_number):
                     'gender':df.loc[idx,'gender'].iloc[0],
                     'BMI':df.loc[idx,'BMI'].iloc[0]})
 
+def get_df_for_lab(lab):
+    lab_idx = df_lab['Lab Test Desc'] == lab
+    return df_lab[lab_idx].copy()
+
+def map_age_gender_bmi(df):
+    age_gender_bmi = df['Patient no.'].apply(get_age_gender_bmi)
+    df['Age Group'] = age_gender_bmi['Age Group']
+    df['gender'] = age_gender_bmi['gender']
+    df['BMI'] = age_gender_bmi['BMI']
+
 if not os.path.exists('figures_whole_group'):
     os.mkdir('figures_whole_group')
 
@@ -151,31 +161,26 @@ if not os.path.exists('figures_glucose'):
     os.mkdir('figures_glucose')
 
 # build df_vital from sheet 'Vitals', df as basic dataframe
-df_vital = pd.read_excel('random_data.xlsx',
-                    sheet_name='Vitals', skiprows=3)
+excel_name = 'SR181549 Summary anonymized.xlsx'
+df_vital = pd.read_excel(excel_name, sheet_name='Vitals', skiprows=3)
 df = df_vital.drop_duplicates(subset=['Patient no.'], keep = 'last')
 df = df.rename(index = df['Patient no.'])
 
 # build df_list from sheet 'List' to get patient gender
-df_list = pd.read_excel('random_data.xlsx',
-                    sheet_name='List', skiprows=4)
+df_list = pd.read_excel(excel_name, sheet_name='List', skiprows=4)
 df_list = df_list.rename(index = df_list['Patient no.'])
 
 # build df_como for Comorbidities
-df_como = pd.read_excel('random_data.xlsx',
-                    sheet_name='Comorbidities', skiprows=3)
+df_como = pd.read_excel(excel_name, sheet_name='Comorbidities', skiprows=3)
 df_como = df_como.rename(index = df_como['Patient no.'])
 
 # build df_lab from sheet 'Lab' to get lab tests
-df_lab = pd.read_excel('random_data.xlsx',
-                        sheet_name='Lab', skiprows = 3)
+df_lab = pd.read_excel(excel_name, sheet_name='Lab', skiprows = 3)
 
 # build df_drugs for Drugs
-# df_drugs = pd.read_excel('SR181549 Summary anonymized.xlsx',
-                        # sheet_name = 'Drugs',skiprows=3)
+# df_drugs = pd.read_excel(excel_name, sheet_name = 'Drugs',skiprows=3)
 
-# clean data with unit
-# clean bp in df_vital
+# clean data with unit, clean bp in df_vital
 df_vital['BP Diastolic'] = df_vital['BP Diastolic'].apply(clean_bp)
 df_vital['BP Systolic'] = df_vital['BP Systolic'].apply(clean_bp)
 
@@ -239,8 +244,7 @@ baseline_and_latest_bp = baseline_bp.append(latest_bp)
 #                  'BP record', age_groups, 'figures_not_null')
 
 ### add variable 'ldl'
-ldl_idx = df_lab['Lab Test Desc'] == 'LDL-C'
-ldl = df_lab[ldl_idx].copy()
+ldl = get_df_for_lab('LDL-C')
 
 # sub_ldl: without duplicates
 sub_ldl = ldl.drop_duplicates(subset=['Patient no.'], keep = 'last')
@@ -251,12 +255,9 @@ ldl_notnull =  sub_ldl[sub_ldl['baseline_ldl'].notnull()]
 ldl_notnull = ldl_notnull.rename(columns = {'Test Result (Numeric)':'latest_ldl'})
 
 # add basic info for ldl_notnull
-age_gender_bmi = ldl_notnull['Patient no.'].apply(get_age_gender_bmi)
-ldl_notnull['Age Group'] = age_gender_bmi['Age Group']
-ldl_notnull['gender'] = age_gender_bmi['gender']
-ldl_notnull['BMI'] = age_gender_bmi['BMI']
+map_age_gender_bmi(ldl_notnull)
 
-# basi plot: distribution
+# basic plot: distribution
 # get_basic_plots(ldl_notnull, 'figures_LDL-C')
 # get_plots_for_lab(ldl_notnull,'figures_LDL-C','baseline_ldl')
 # get_plots_for_lab(ldl_notnull,'figures_LDL-C','latest_ldl')
@@ -273,8 +274,7 @@ baseline_and_latest_ldl = baseline_ldl.append(latest_ldl)
                  # 'LDL record', age_groups, 'figures_LDL-C')
 
 ### add variable 'hba1c'
-hba1c_idx = df_lab['Lab Test Desc'] == 'HbA1c'
-hba1c = df_lab[hba1c_idx].copy()
+hba1c = get_df_for_lab('HbA1c')
 
 # sub_hba1c: drop duplicates
 sub_hba1c = hba1c.drop_duplicates(subset=['Patient no.'], keep = 'last')
@@ -284,21 +284,16 @@ hba1c_notnull =  sub_hba1c[sub_hba1c['Test Result (Numeric)'].notnull()]
 hba1c_notnull = hba1c_notnull.rename(columns = {'Test Result (Numeric)':'Latest hba1c'})
 
 # add basic info for hba1c_notnull
-age_gender_bmi = hba1c_notnull['Patient no.'].apply(get_age_gender_bmi)
-hba1c_notnull['Age Group'] = age_gender_bmi['Age Group']
-hba1c_notnull['gender'] = age_gender_bmi['gender']
-hba1c_notnull['BMI'] = age_gender_bmi['BMI']
+map_age_gender_bmi(hba1c_notnull)
 
 # basic plot: distribution
-# get_basic_plots(hba1c_notnull, 'figures_hba1c')
-# get_plots_for_lab(hba1c_notnull,'figures_hba1c','Latest hba1c')
+get_basic_plots(hba1c_notnull, 'figures_hba1c')
+get_plots_for_lab(hba1c_notnull,'figures_hba1c','Latest hba1c')
 
 ######## ONLY 6 PATIENT HAVE TAKEN HBA1C TEST!!!!!!!! #########
 
 ### add variable 'glucose'
-glucose_idx = df_lab['Lab Test Desc'] == 'Glucose, Fasting, pl'
-glucose = df_lab[glucose_idx].copy()
-
+glucose = get_df_for_lab('Glucose, Fasting, pl')
 # sub_glucose: drop duplicates
 sub_glucose = glucose.drop_duplicates(subset=['Patient no.'], keep = 'last')
 
@@ -307,10 +302,7 @@ glucose_notnull =  sub_glucose[sub_glucose['Test Result (Numeric)'].notnull()]
 glucose_notnull = glucose_notnull.rename(columns = {'Test Result (Numeric)':'Latest Glucose'})
 
 # add basic info for glucose_notnull
-age_gender_bmi = glucose_notnull['Patient no.'].apply(get_age_gender_bmi)
-glucose_notnull['Age Group'] = age_gender_bmi['Age Group']
-glucose_notnull['gender'] = age_gender_bmi['gender']
-glucose_notnull['BMI'] = age_gender_bmi['BMI']
+map_age_gender_bmi(glucose_notnull)
 
 # basic plot: distribution
 get_basic_plots(glucose_notnull, 'figures_glucose')
