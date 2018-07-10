@@ -38,7 +38,7 @@ def plt_save_basic_plot(plot_type, data, x, y, hue, order, folder):
     plt.figure()
     if plot_type == 'boxplot':
         ax = sns.boxplot(x= x, y = y, hue = hue, data = data, order = order)
-        if x == 'age_group':
+        if x == 'Age Group':
             ax.set_title('Age Group vs '+y)
             ax.set(xlabel='Age Group', ylabel=y)
         if hue != None:
@@ -66,43 +66,30 @@ def plt_save_bp_plot(plot_type, data, x, y, hue, order, folder):
     fname = os.path.join(folder, get_picname(x,y,hue,plot_type))
     plt.savefig(fname, dpi=300)
 
-
-# plt.figure()
-# ax1 = sns.boxplot(x= 'age_group', y = 'BP Diastolic', hue = 'status',
-#             data = bp_before_and_after, order = age_groups)
-# ax1.set_title("Age Group vs BP Diastolic")
-# ax1.set(xlabel='Age Group', ylabel='BP Diastolic [mmHg]')
-# ax1.legend(loc='upper right', title=None)
-# plt.plot([-1,6],[90,90],'--', linewidth = 0.5)
-# fname = os.path.join('figures_not_null',
-#                     'Age Group vs BP Diastolic.png')
-# plt.savefig(fname, dpi=300)
-
-
 def get_basic_plots(data,folder): # BP Diastolic, BP Systolic
-    plt_save_basic_plot('boxplot', data, 'age_group','BMI', None,
+    plt_save_basic_plot('boxplot', data, 'Age Group','BMI', None,
                     age_groups, folder)
     plt_save_basic_plot('boxplot', data, 'gender','BMI', None,
                     None, folder)
-    plt_save_basic_plot('swarmplot', data, 'age_group','BMI', 'gender',
+    plt_save_basic_plot('swarmplot', data, 'Age Group','BMI', 'gender',
                     age_groups, folder)
-    plt_save_basic_plot('boxplot', data, 'age_group','BMI', 'gender',
+    plt_save_basic_plot('boxplot', data, 'Age Group','BMI', 'gender',
                     age_groups, folder)
 
 def get_plots_for_bp(data,folder,diastolic, systolic):
-    plt_save_bp_plot('boxplot', data, 'age_group', diastolic,
+    plt_save_bp_plot('boxplot', data, 'Age Group', diastolic,
                     None, age_groups, folder)
-    plt_save_bp_plot('boxplot', data, 'age_group',systolic,
+    plt_save_bp_plot('boxplot', data, 'Age Group',systolic,
                     None, age_groups, folder)
-    plt_save_bp_plot('boxplot', data, 'age_group',diastolic,
+    plt_save_bp_plot('boxplot', data, 'Age Group',diastolic,
                     'gender', age_groups, folder)
-    plt_save_bp_plot('boxplot', data, 'age_group',systolic,
+    plt_save_bp_plot('boxplot', data, 'Age Group',systolic,
                     'gender', age_groups,folder)
 
-def get_plots_for_ldl(data,folder,ldl):
-    plt_save_basic_plot('boxplot', data, 'age_group', ldl,
+def get_plots_for_lab(data,folder,lab):
+    plt_save_basic_plot('boxplot', data, 'Age Group', lab,
                     None, age_groups, folder)
-    plt_save_basic_plot('boxplot', data, 'age_group',ldl,
+    plt_save_basic_plot('boxplot', data, 'Age Group',lab,
                     'gender', age_groups, folder)
 
 
@@ -144,7 +131,7 @@ def get_baseline_ldl(patient_number):
 
 def get_age_gender_bmi(patient_number):
     idx = df['Patient no.'] == patient_number
-    return pd.Series({'age_group':df.loc[idx,'age_group'].iloc[0],
+    return pd.Series({'Age Group':df.loc[idx,'Age Group'].iloc[0],
                     'gender':df.loc[idx,'gender'].iloc[0],
                     'BMI':df.loc[idx,'BMI'].iloc[0]})
 
@@ -159,6 +146,9 @@ if not os.path.exists('figures_LDL-C'):
 
 if not os.path.exists('figures_hba1c'):
     os.mkdir('figures_hba1c')
+
+if not os.path.exists('figures_glucose'):
+    os.mkdir('figures_glucose')
 
 # build df_vital from sheet 'Vitals', df as basic dataframe
 df_vital = pd.read_excel('random_data.xlsx',
@@ -204,7 +194,7 @@ df['age'] = (df['Reg Calendar Date'] - df['DOB']).dt.days/365
 group_size = 20
 age_groups = ['20-40 years old', '40-60 years old',
                 '60-80 years old', '80-100 years old']
-df['age_group'] = df['age'].apply(get_age_group)
+df['Age Group'] = df['age'].apply(get_age_group)
 
 ### add BP into df
 df['BP Diastolic'] = df['BP Diastolic'].apply(clean_bp)
@@ -262,14 +252,14 @@ ldl_notnull = ldl_notnull.rename(columns = {'Test Result (Numeric)':'latest_ldl'
 
 # add basic info for ldl_notnull
 age_gender_bmi = ldl_notnull['Patient no.'].apply(get_age_gender_bmi)
-ldl_notnull['age_group'] = age_gender_bmi['age_group']
+ldl_notnull['Age Group'] = age_gender_bmi['Age Group']
 ldl_notnull['gender'] = age_gender_bmi['gender']
 ldl_notnull['BMI'] = age_gender_bmi['BMI']
 
 # basi plot: distribution
-get_basic_plots(ldl_notnull, 'figures_LDL-C')
-get_plots_for_ldl(ldl_notnull,'figures_LDL-C','baseline_ldl')
-get_plots_for_ldl(ldl_notnull,'figures_LDL-C','latest_ldl')
+# get_basic_plots(ldl_notnull, 'figures_LDL-C')
+# get_plots_for_lab(ldl_notnull,'figures_LDL-C','baseline_ldl')
+# get_plots_for_lab(ldl_notnull,'figures_LDL-C','latest_ldl')
 
 # plots for ldl: comparision with baseline
 baseline_ldl = ldl_notnull.copy()
@@ -279,8 +269,8 @@ latest_ldl = ldl_notnull.copy()
 latest_ldl['LDL'] = latest_ldl['latest_ldl']
 latest_ldl['LDL record'] = 'Latest'
 baseline_and_latest_ldl = baseline_ldl.append(latest_ldl)
-plt_save_basic_plot('boxplot', baseline_and_latest_ldl, 'age_group', 'LDL',
-                 'LDL record', age_groups, 'figures_LDL-C')
+# plt_save_basic_plot('boxplot', baseline_and_latest_ldl, 'age_group', 'LDL',
+                 # 'LDL record', age_groups, 'figures_LDL-C')
 
 ### add variable 'hba1c'
 hba1c_idx = df_lab['Lab Test Desc'] == 'HbA1c'
@@ -295,12 +285,33 @@ hba1c_notnull = hba1c_notnull.rename(columns = {'Test Result (Numeric)':'Latest 
 
 # add basic info for hba1c_notnull
 age_gender_bmi = hba1c_notnull['Patient no.'].apply(get_age_gender_bmi)
-hba1c_notnull['age_group'] = age_gender_bmi['age_group']
+hba1c_notnull['Age Group'] = age_gender_bmi['Age Group']
 hba1c_notnull['gender'] = age_gender_bmi['gender']
 hba1c_notnull['BMI'] = age_gender_bmi['BMI']
 
-# basi plot: distribution
-get_basic_plots(hba1c_notnull, 'figures_hba1c')
-get_plots_for_ldl(hba1c_notnull,'figures_hba1c','Latest hba1c')
+# basic plot: distribution
+# get_basic_plots(hba1c_notnull, 'figures_hba1c')
+# get_plots_for_lab(hba1c_notnull,'figures_hba1c','Latest hba1c')
 
 ######## ONLY 6 PATIENT HAVE TAKEN HBA1C TEST!!!!!!!! #########
+
+### add variable 'glucose'
+glucose_idx = df_lab['Lab Test Desc'] == 'Glucose, Fasting, pl'
+glucose = df_lab[glucose_idx].copy()
+
+# sub_glucose: drop duplicates
+sub_glucose = glucose.drop_duplicates(subset=['Patient no.'], keep = 'last')
+
+# glucose_notnull: drop null values
+glucose_notnull =  sub_glucose[sub_glucose['Test Result (Numeric)'].notnull()]
+glucose_notnull = glucose_notnull.rename(columns = {'Test Result (Numeric)':'Latest Glucose'})
+
+# add basic info for glucose_notnull
+age_gender_bmi = glucose_notnull['Patient no.'].apply(get_age_gender_bmi)
+glucose_notnull['Age Group'] = age_gender_bmi['Age Group']
+glucose_notnull['gender'] = age_gender_bmi['gender']
+glucose_notnull['BMI'] = age_gender_bmi['BMI']
+
+# basic plot: distribution
+get_basic_plots(glucose_notnull, 'figures_glucose')
+get_plots_for_lab(glucose_notnull,'figures_glucose','Latest Glucose')
