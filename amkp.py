@@ -8,6 +8,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import cross_val_score, KFold
+from sklearn.metrics import roc_auc_score
 # Instruction
 # '###' add on new variable in research
 # '##' hiden function, alternative method
@@ -337,4 +339,33 @@ cols = ['Age','Gender','Baseline Diastolic','Baseline Systolic',
         'Dyslipidaemia','Pre-Diabetes']
 x = train_data[cols]
 y = train_data['Diastolic Improvement']
-y1 = model.predict(y)
+
+## there are two methods to cross validate. First method only gives you there
+## the score, but does not give you a trained model. It is used for understanding
+## the problem - which predictors and which models work better
+# sklearn provides a function cross_val_score for this
+score = cross_val_score(model, x, y, scoring='roc_auc', cv=5)
+print(score)
+
+
+## method 2 involves going through train and test splis one by one
+## sklearn provides a class KFold to help with that
+kf = KFold(nsplits=5, shuffle=True)
+scores = []
+models = []
+for train_index, test_index in kf.split(x):
+    ## we will make n models, one for each fold
+    model = LogisticRegression(C=10)
+    x_train, x_test = x[train_index], x[test_index]
+    y_train, y_test = y[train_index], y[test_index]
+    model.fit(x_train, y_train)
+    y_pred = model.predict_proba(x_test)[:, 1]  # [:, 1] is 2nd column -
+                                        # 2nd column is probability of output
+                                        # to be 1, 1st column is for 0
+    this_score = roc_auc_score(y_test, y_pred)
+    scores.append(this_score)
+    models.append(model)
+
+print(scores)
+## now we have n models which can be used for future data,
+## and average of outputs of these models can be used as the prediction
