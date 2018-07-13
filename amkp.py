@@ -394,6 +394,6 @@ for train_index, test_index in kf.split(x):
 
 for i in range(len(model_names)):
     print('{}: {}'.format(model_names[i], scores2[model_names[i]]))
-
+## append is not for function call
 ## now we have n models which can be used for future data,
 ## and average of outputs of these models can be used as the prediction
