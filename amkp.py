@@ -1,15 +1,21 @@
 import os
 import pandas as pd
+import numpy as np
 import xlsxwriter
 from pandas import DataFrame
-import numpy as np
 
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.model_selection import cross_val_score, KFold
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, mean_squared_error
+from sklearn.ensemble import RandomForestRegressor
+
+from xgboost import XGBRegressor
+
+from lightgbm import LGBMRegressor
+
 # Instruction
 # '###' add on new variable in research
 # '##' hiden function, alternative method
@@ -334,38 +340,60 @@ map_como_status(train_data)
 train_data['Diastolic Improvement'] = train_data['BP Diastolic'] - train_data['Baseline Diastolic']
 train_data['Systolic Improvement'] = train_data['BP Systolic'] - train_data['Baseline Systolic']
 
-model = LogisticRegression(C=10)
+
 cols = ['Age','Gender','Baseline Diastolic','Baseline Systolic',
         'Dyslipidaemia','Pre-Diabetes']
 x = train_data[cols]
+x['Dyslipidaemia'] = x['Dyslipidaemia'].apply(lambda i: int(i))
+x['Pre-Diabetes'] = x['Pre-Diabetes'].apply(lambda i: int(i))
 y = train_data['Diastolic Improvement']
 
+dummy_fields = ['Gender']
+for each in dummy_fields:
+    dummies = pd.get_dummies(x.loc[:, each], prefix=each )
+    x = pd.concat( [x, dummies], axis = 1 )
+
+fields_to_drop = ['Gender']
+x = x.drop(fields_to_drop, axis = 1)
+
+model1 = LinearRegression(copy_X=True)
+model2 = RandomForestRegressor(max_depth=3, random_state=0)
+model3 = XGBRegressor()
+model4 = LGBMRegressor()
+models = [model1, model2, model3, model4]
+model_names = []
+for m in models:
+    model_names.append(m.__class__.__name__)
 ## there are two methods to cross validate. First method only gives you there
 ## the score, but does not give you a trained model. It is used for understanding
 ## the problem - which predictors and which models work better
 # sklearn provides a function cross_val_score for this
-score = cross_val_score(model, x, y, scoring='roc_auc', cv=5)
-print(score)
-
+# scores1 = {} # scores1 is scores by method 1
+# for i in range(len(models)):
+#     scores1[i] = cross_val_score(models[i], x, y,
+#                                 scoring='neg_mean_squared_error', cv=5)
+#
+# for i in range(len(models)):
+#     print('{}: {}'.format(models[i].__class__.__name__, scores1[i]))
 
 ## method 2 involves going through train and test splis one by one
 ## sklearn provides a class KFold to help with that
-kf = KFold(nsplits=5, shuffle=True)
-scores = []
-models = []
-for train_index, test_index in kf.split(x):
-    ## we will make n models, one for each fold
-    model = LogisticRegression(C=10)
-    x_train, x_test = x[train_index], x[test_index]
-    y_train, y_test = y[train_index], y[test_index]
-    model.fit(x_train, y_train)
-    y_pred = model.predict_proba(x_test)[:, 1]  # [:, 1] is 2nd column -
-                                        # 2nd column is probability of output
-                                        # to be 1, 1st column is for 0
-    this_score = roc_auc_score(y_test, y_pred)
-    scores.append(this_score)
-    models.append(model)
+kf = KFold(n_splits=5, shuffle=True)
+scores2= {}
+models_collection = pd.DataFrame({},columns = model_names)
 
-print(scores)
+for train_index, test_index in kf.split(x):
+    j = 0
+    ## we will make n models, one for each fold
+    x_train, x_test = x.iloc[train_index], x.iloc[test_index]
+    y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+    for i in range(len(models)):
+        models_collection.loc(0,model_names[i])=models[i].fit(x_train, y_train)
+        y_pred = models[i].predict(x_test)
+        scores2[model_names[i]].append(mean_squared_error(y_test, y_pred))
+
+for i in range(len(model_names)):
+    print('{}: {}'.format(model_names[i], scores2[model_names[i]]))
+
 ## now we have n models which can be used for future data,
 ## and average of outputs of these models can be used as the prediction
