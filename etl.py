@@ -208,3 +208,43 @@ glucose_notnull = glucose_notnull.rename(columns = {'Test Result (Numeric)':'Lat
 
 # add basic info for glucose_notnull
 map_age_gender_bmi(glucose_notnull)
+
+### Create a Pandas dataframe for regission model
+bp_notnull = bbp_notnull[bbp_notnull['BP Diastolic'].notnull()]
+train_data = bp_notnull.copy()
+map_como_status(train_data)
+train_data['Diastolic Improvement'] = train_data['BP Diastolic'] - train_data['Baseline Diastolic']
+train_data['Systolic Improvement'] = train_data['BP Systolic'] - train_data['Baseline Systolic']
+
+cols = ['Age','Gender','Baseline Diastolic','Baseline Systolic',
+        'Dyslipidaemia','Pre-Diabetes']
+
+train_data['Dyslipidaemia'] = train_data['Dyslipidaemia'].apply(lambda i: int(i))
+train_data['Pre-Diabetes'] = train_data['Pre-Diabetes'].apply(lambda i: int(i))
+# y = train_data['Diastolic Improvement']
+
+dummy_fields = ['Gender']
+for each in dummy_fields:
+    dummies = pd.get_dummies(train_data.loc[:, each], prefix=each )
+    train_data = pd.concat( [train_data, dummies], axis = 1 )
+
+BP_improvement = pd.DataFrame(train_data)
+fields_to_drop = ['Polyclinic Code','Visit Code','Height','Weight',
+                    'DOB','Age Group','Gender']
+BP_improvement = BP_improvement.drop(fields_to_drop, axis = 1)
+
+# Create a Pandas Excel writer using XlsxWriter as the engine.
+writer = pd.ExcelWriter('edited_data.xlsx', engine='xlsxwriter')
+
+# Convert the dataframe to an XlsxWriter Excel object.
+sub_vitals.to_excel(writer, sheet_name='Latest Vitals')
+bbp_notnull.to_excel(writer, sheet_name='Baseline BP')
+baseline_and_latest_bp.to_excel(writer, sheet_name='BP Comparision')
+ldl_notnull.to_excel(writer, sheet_name='Latest LDL-C Test')
+baseline_and_latest_ldl.to_excel(writer, sheet_name='LDL-C Comparision')
+hba1c_notnull.to_excel(writer, sheet_name='HbAc1 Test')
+glucose_notnull.to_excel(writer, sheet_name='Glucose Test')
+BP_improvement.to_excel(writer, sheet_name='BP Improvement')
+
+# Close the Pandas Excel writer and output the Excel file.
+writer.save()
