@@ -388,7 +388,6 @@ for n, (train_index, test_index) in enumerate(kf.split(x)):
         this_score = mean_squared_error(y_test, y_pred)
         scores2[model_names[i]][n] = this_score
         # models_collection[model_names[i]].append(model)
-
 scores2 = pd.DataFrame(scores2)
 
 ## now we have n models which can be used for future data,
