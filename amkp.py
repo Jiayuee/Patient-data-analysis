@@ -164,6 +164,8 @@ def map_como_status(df):
     df['Dyslipidaemia'] =  dyslip_predia['Dyslipidaemia']
     df['Pre-Diabetes'] =  dyslip_predia['Pre-Diabetes']
 
+# def mkdir(dirname):
+#     if os.pa
 
 if not os.path.exists('figures_whole_group'):
     os.mkdir('figures_whole_group')
@@ -181,6 +183,7 @@ if not os.path.exists('figures_glucose'):
     os.mkdir('figures_glucose')
 
 # build df_vital from sheet 'Vitals', df as basic dataframe
+## ip for input, op for outout
 excel_name = 'random_data.xlsx'
 vitals = pd.read_excel(excel_name, sheet_name='Vitals', skiprows=3)
 sub_vitals = vitals.drop_duplicates(subset=['Patient no.'], keep = 'last')
@@ -400,3 +403,7 @@ scores2 = pd.DataFrame(scores2)
 
 ## now we have n models which can be used for future data,
 ## and average of outputs of these models can be used as the prediction
+
+# etl.py (extract, transform, load) -? take raw data and prepare processed data
+# descriptive_analysis.py -> genrates tables and charts
+# predictive_models.py ->
