@@ -1,3 +1,7 @@
+import os
+import pandas as pd
+from pandas import DataFrame
+
 import seaborn as sns
 import matplotlib.pyplot as plt
 
@@ -65,6 +69,19 @@ def get_plots_for_lab(data,folder,lab):
                     None, age_groups, folder)
     save_basic_plot('boxplot', data, 'Age Group',lab,
                     'Gender', age_groups, folder)
+
+### import data
+ip = 'edited_data.xlsx'
+sub_vitals = pd.read_excel(ip, sheet_name='Latest Vitals')
+bbp_notnull = pd.read_excel(ip, sheet_name='Baseline BP')
+baseline_and_latest_bp = pd.read_excel(ip, sheet_name='BP Comparision')
+ldl_notnull = pd.read_excel(ip, sheet_name='Latest LDL-C Test')
+baseline_and_latest_ldl = pd.read_excel(ip, sheet_name='LDL-C Comparision')
+hba1c_notnull = pd.read_excel(ip, sheet_name='HbAc1 Test')
+glucose_notnull = pd.read_excel(ip, sheet_name='Glucose Test')
+
+age_groups = ['20-40 years old', '40-60 years old',
+                '60-80 years old', '80-100 years old']
 
 ### Boxplots and scatterplots for sub_vitals
 get_basic_plots(sub_vitals, 'figures_whole_group')
