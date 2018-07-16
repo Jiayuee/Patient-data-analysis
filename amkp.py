@@ -11,9 +11,7 @@ from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.model_selection import cross_val_score, KFold
 from sklearn.metrics import roc_auc_score, mean_squared_error
 from sklearn.ensemble import RandomForestRegressor
-
 from xgboost import XGBRegressor
-
 from lightgbm import LGBMRegressor
 
 # Instruction
@@ -164,41 +162,33 @@ def map_como_status(df):
     df['Dyslipidaemia'] =  dyslip_predia['Dyslipidaemia']
     df['Pre-Diabetes'] =  dyslip_predia['Pre-Diabetes']
 
-# def mkdir(dirname):
-#     if os.pa
+def mkdir(dirname):
+   if not os.path.exists(dirname):
+       os.mkdir(dirname)
 
-if not os.path.exists('figures_whole_group'):
-    os.mkdir('figures_whole_group')
+dirnames = ['figures_whole_group','figures_bp','figures_LDL-C',
+            'figures_hba1c','figures_glucose']
 
-if not os.path.exists('figures_bp'):
-    os.mkdir('figures_bp')
-
-if not os.path.exists('figures_LDL-C'):
-    os.mkdir('figures_LDL-C')
-
-if not os.path.exists('figures_hba1c'):
-    os.mkdir('figures_hba1c')
-
-if not os.path.exists('figures_glucose'):
-    os.mkdir('figures_glucose')
+for d in dirnames:
+    mkdir(d)
 
 # build df_vital from sheet 'Vitals', df as basic dataframe
 ## ip for input, op for outout
-excel_name = 'random_data.xlsx'
-vitals = pd.read_excel(excel_name, sheet_name='Vitals', skiprows=3)
+ip = 'random_data.xlsx'
+vitals = pd.read_excel(ip, sheet_name='Vitals', skiprows=3)
 sub_vitals = vitals.drop_duplicates(subset=['Patient no.'], keep = 'last')
 sub_vitals = sub_vitals.rename(index = sub_vitals['Patient no.'])
 
 # build df_list from sheet 'List' to get patient gender
-df_list = pd.read_excel(excel_name, sheet_name='List', skiprows=4)
+df_list = pd.read_excel(ip, sheet_name='List', skiprows=4)
 df_list = df_list.rename(index = df_list['Patient no.'])
 
 # build df_como for Comorbidities
-como = pd.read_excel(excel_name, sheet_name='Comorbidities', skiprows=3)
+como = pd.read_excel(ip, sheet_name='Comorbidities', skiprows=3)
 como = como.rename(index = como['Patient no.'])
 
 # build df_lab from sheet 'Lab' to get lab tests
-lab = pd.read_excel(excel_name, sheet_name='Lab', skiprows = 3)
+lab = pd.read_excel(ip, sheet_name='Lab', skiprows = 3)
 
 # build df_drugs for Drugs
 # drugs = pd.read_excel(excel_name, sheet_name = 'Drugs',skiprows=3)
@@ -210,12 +200,12 @@ vitals['BP Systolic'] = vitals['BP Systolic'].apply(clean_bp)
 # clean bmi data
 sub_vitals['BMI'] = sub_vitals['BMI'].apply(clean_bmi)
 
-### add 'gender' variable into df
+### add 'gender' variable into sub_vitals
 sub_vitals['Gender'] = df_list['Gender']
 sub_vitals.loc[sub_vitals['Gender'] == 'M','Gender'] = 'Male'
 sub_vitals.loc[sub_vitals['Gender'] == 'F','Gender'] = 'Female'
 
-### add 'age' variable into df
+### add 'age' variable into sub_vitals
 sub_vitals['DOB'] = df_list['Patient DOB']
 sub_vitals['Age'] = (sub_vitals['Reg Calendar Date'] - sub_vitals['DOB']).dt.days/365
 
@@ -228,9 +218,9 @@ sub_vitals['Age Group'] = sub_vitals['Age'].apply(get_age_group)
 sub_vitals['BP Diastolic'] = sub_vitals['BP Diastolic'].apply(clean_bp)
 sub_vitals['BP Systolic'] = sub_vitals['BP Systolic'].apply(clean_bp)
 
-## plot and save all boxplots and scatterplots required
-# get_basic_plots(sub_vitals, 'figures_whole_group')
-# get_plots_for_bp(sub_vitals, 'figures_whole_group','BP Diastolic','BP Systolic')
+# plot and save all boxplots and scatterplots required
+get_basic_plots(sub_vitals, 'figures_whole_group')
+get_plots_for_bp(sub_vitals, 'figures_whole_group','BP Diastolic','BP Systolic')
 
 ## Get no of patient whose BP is in certain range
 # c = 0 # c for count, i for patient no.
@@ -240,17 +230,19 @@ sub_vitals['BP Systolic'] = sub_vitals['BP Systolic'].apply(clean_bp)
 #             c +=1
 # print(c)
 
-### add 'BP Diastolic before' as BP before drug from BP at hypertension detect date
+### add 'baseline_bp' as BP before drug from BP at hypertension detect date
 baseline_bp_all = sub_vitals['Patient no.'].apply(get_baseline_bp)
 sub_vitals = pd.concat([sub_vitals, baseline_bp_all], axis=1)
 
 # define BBP_notnull for patient whose BP before drug is recorded
 bbp_notnull =  sub_vitals[sub_vitals['Baseline Systolic'].notnull()]
-## plot and save all boxplots and scatterplots required
-# get_basic_plots(bbp_notnull, 'figures_bp')
-# get_plots_for_bp(bbp_notnull, 'figures_bp','BP Diastolic','BP Systolic')
-# get_plots_for_bp(bbp_notnull, 'figures_bp','Baseline Diastolic',
-#                 'Baseline Systolic')
+
+# plot and save all boxplots and scatterplots required
+get_basic_plots(bbp_notnull, 'figures_bp')
+get_plots_for_bp(bbp_notnull, 'figures_bp','BP Diastolic','BP Systolic')
+get_plots_for_bp(bbp_notnull, 'figures_bp','Baseline Diastolic',
+                'Baseline Systolic')
+
 # plot grouped boxplot to compare BP before and after drug
 baseline_bp = bbp_notnull.copy()
 baseline_bp['BP record'] = 'Baseline BP'
@@ -260,11 +252,11 @@ latest_bp = bbp_notnull.copy()
 latest_bp['BP record'] = 'Latest BP'
 baseline_and_latest_bp = baseline_bp.append(latest_bp)
 
-## Plot boxplots to compare baseline BP and present BP
-# plt_save_bp_plot('boxplot', baseline_and_latest_bp, 'Age Group', 'BP Diastolic',
-#                  'BP record', age_groups, 'figures_bp')
-# plt_save_bp_plot('boxplot', baseline_and_latest_bp, 'Age Group', 'BP Systolic',
-#                  'BP record', age_groups, 'figures_bp')
+# Plot boxplots to compare baseline BP and present BP
+plt_save_bp_plot('boxplot', baseline_and_latest_bp, 'Age Group', 'BP Diastolic',
+                 'BP record', age_groups, 'figures_bp')
+plt_save_bp_plot('boxplot', baseline_and_latest_bp, 'Age Group', 'BP Systolic',
+                 'BP record', age_groups, 'figures_bp')
 
 ### add variable 'ldl'
 ldl = get_df_for_lab('LDL-C')
@@ -280,10 +272,10 @@ ldl_notnull = ldl_notnull.rename(columns = {'Test Result (Numeric)':'Latest LDL'
 # add basic info for ldl_notnull
 map_age_gender_bmi(ldl_notnull)
 
-# # basic plot: distribution
-# get_basic_plots(ldl_notnull, 'figures_LDL-C')
-# get_plots_for_lab(ldl_notnull,'figures_LDL-C','Baseline LDL')
-# get_plots_for_lab(ldl_notnull,'figures_LDL-C','Latest LDL')
+# basic plot: distribution
+get_basic_plots(ldl_notnull, 'figures_LDL-C')
+get_plots_for_lab(ldl_notnull,'figures_LDL-C','Baseline LDL')
+get_plots_for_lab(ldl_notnull,'figures_LDL-C','Latest LDL')
 
 # plots for ldl: comparision with baseline
 baseline_ldl = ldl_notnull.copy()
@@ -293,8 +285,8 @@ latest_ldl = ldl_notnull.copy()
 latest_ldl['LDL'] = latest_ldl['Latest LDL']
 latest_ldl['LDL Type'] = 'Latest'
 baseline_and_latest_ldl = baseline_ldl.append(latest_ldl)
-# plt_save_basic_plot('boxplot', baseline_and_latest_ldl, 'Age Group', 'LDL',
-#                  'LDL Type', age_groups, 'figures_LDL-C')
+plt_save_basic_plot('boxplot', baseline_and_latest_ldl, 'Age Group', 'LDL',
+                 'LDL Type', age_groups, 'figures_LDL-C')
 
 ### add variable 'hba1c'
 hba1c = get_df_for_lab('HbA1c')
@@ -309,11 +301,9 @@ hba1c_notnull = hba1c_notnull.rename(columns = {'Test Result (Numeric)':'Latest 
 # add basic info for hba1c_notnull
 map_age_gender_bmi(hba1c_notnull)
 
-# #basic plot: distribution
-# get_basic_plots(hba1c_notnull, 'figures_hba1c')
-# get_plots_for_lab(hba1c_notnull,'figures_hba1c','Latest HbA1c')
-
-######## ONLY 6 PATIENT HAVE TAKEN HBA1C TEST!!!!!!!! #########
+#basic plot: distribution
+get_basic_plots(hba1c_notnull, 'figures_hba1c')
+get_plots_for_lab(hba1c_notnull,'figures_hba1c','Latest HbA1c')
 
 ### add variable 'glucose'
 glucose = get_df_for_lab('Glucose, Fasting, pl')
@@ -327,9 +317,9 @@ glucose_notnull = glucose_notnull.rename(columns = {'Test Result (Numeric)':'Lat
 # add basic info for glucose_notnull
 map_age_gender_bmi(glucose_notnull)
 
-# #basic plot: distribution
-# get_basic_plots(glucose_notnull, 'figures_glucose')
-# get_plots_for_lab(glucose_notnull,'figures_glucose','Latest Glucose')
+#basic plot: distribution
+get_basic_plots(glucose_notnull, 'figures_glucose')
+get_plots_for_lab(glucose_notnull,'figures_glucose','Latest Glucose')
 
 
 ### Build predictive model for improvement in BP
