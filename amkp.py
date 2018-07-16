@@ -362,8 +362,10 @@ model3 = XGBRegressor()
 model4 = LGBMRegressor()
 models = [model1, model2, model3, model4]
 model_names = []
+scores2 = {}
 for m in models:
     model_names.append(m.__class__.__name__)
+    scores2[m.__class__.__name__] = {}
 ## there are two methods to cross validate. First method only gives you there
 ## the score, but does not give you a trained model. It is used for understanding
 ## the problem - which predictors and which models work better
@@ -379,21 +381,22 @@ for m in models:
 ## method 2 involves going through train and test splis one by one
 ## sklearn provides a class KFold to help with that
 kf = KFold(n_splits=5, shuffle=True)
-scores2= {}
-models_collection = pd.DataFrame({},columns = model_names)
+# scores2= pd.DataFrame(np.zeros((4,5)), columns = model_names)
+# models_collection = pd.DataFrame({},columns = model_names)
 
-for train_index, test_index in kf.split(x):
-    j = 0
+for n, (train_index, test_index) in enumerate(kf.split(x)):
     ## we will make n models, one for each fold
     x_train, x_test = x.iloc[train_index], x.iloc[test_index]
     y_train, y_test = y.iloc[train_index], y.iloc[test_index]
     for i in range(len(models)):
-        models_collection.loc(0,model_names[i])=models[i].fit(x_train, y_train)
-        y_pred = models[i].predict(x_test)
-        scores2[model_names[i]].append(mean_squared_error(y_test, y_pred))
+        model = models[i]
+        model.fit(x_train, y_train)
+        y_pred = model.predict(x_test)
+        this_score = mean_squared_error(y_test, y_pred)
+        scores2[model_names[i]][n] = this_score
+        # models_collection[model_names[i]].append(model)
 
-for i in range(len(model_names)):
-    print('{}: {}'.format(model_names[i], scores2[model_names[i]]))
+scores2 = pd.DataFrame(scores2)
 
 ## now we have n models which can be used for future data,
 ## and average of outputs of these models can be used as the prediction
