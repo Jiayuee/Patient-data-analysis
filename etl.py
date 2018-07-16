@@ -230,7 +230,7 @@ for each in dummy_fields:
 
 BP_improvement = pd.DataFrame(train_data)
 fields_to_drop = ['Polyclinic Code','Visit Code','Height','Weight',
-                    'DOB','Age Group']
+                    'DOB','Age Group','Gender']
 BP_improvement = BP_improvement.drop(fields_to_drop, axis = 1)
 
 # Create a Pandas Excel writer using XlsxWriter as the engine.

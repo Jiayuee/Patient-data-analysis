@@ -1,3 +1,9 @@
+import os
+import pandas as pd
+import numpy as np
+import xlsxwriter
+from pandas import DataFrame
+
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.model_selection import cross_val_score, KFold
 from sklearn.metrics import roc_auc_score, mean_squared_error
@@ -10,27 +16,13 @@ from lightgbm import LGBMRegressor
 # simple logistic regression
 
 # prepare train data
-bp_notnull = bbp_notnull[bbp_notnull['BP Diastolic'].notnull()]
-train_data = bp_notnull.copy()
-map_como_status(train_data)
-train_data['Diastolic Improvement'] = train_data['BP Diastolic'] - train_data['Baseline Diastolic']
-train_data['Systolic Improvement'] = train_data['BP Systolic'] - train_data['Baseline Systolic']
+ip = "edited_data.xlsx"
+train_data = pd.read_excel(ip,sheet_name="BP Improvement")
 
-
-cols = ['Age','Gender','Baseline Diastolic','Baseline Systolic',
+cols = ['Age','Gender_Female','Gender_Male','Baseline Diastolic','Baseline Systolic',
         'Dyslipidaemia','Pre-Diabetes']
 x = train_data[cols]
-x['Dyslipidaemia'] = x['Dyslipidaemia'].apply(lambda i: int(i))
-x['Pre-Diabetes'] = x['Pre-Diabetes'].apply(lambda i: int(i))
 y = train_data['Diastolic Improvement']
-
-dummy_fields = ['Gender']
-for each in dummy_fields:
-    dummies = pd.get_dummies(x.loc[:, each], prefix=each )
-    x = pd.concat( [x, dummies], axis = 1 )
-
-fields_to_drop = ['Gender']
-x = x.drop(fields_to_drop, axis = 1)
 
 model1 = LinearRegression(copy_X=True)
 model2 = RandomForestRegressor(max_depth=3, random_state=0)
@@ -45,7 +37,7 @@ for m in models:
 # there are two methods to cross validate. First method only gives you there
 # the score, but does not give you a trained model. It is used for understanding
 # the problem - which predictors and which models work better
-sklearn provides a function cross_val_score for this
+# sklearn provides a function cross_val_score for this
 scores1 = {} # scores1 is scores by method 1
 for i in range(len(models)):
     scores1[i] = cross_val_score(models[i], x, y,
