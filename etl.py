@@ -4,21 +4,6 @@ import numpy as np
 import xlsxwriter
 from pandas import DataFrame
 
-import seaborn as sns
-import matplotlib.pyplot as plt
-
-from sklearn.linear_model import LogisticRegression, LinearRegression
-from sklearn.model_selection import cross_val_score, KFold
-from sklearn.metrics import roc_auc_score, mean_squared_error
-from sklearn.ensemble import RandomForestRegressor
-from xgboost import XGBRegressor
-from lightgbm import LGBMRegressor
-
-# Instruction
-# '###' add on new variable in research
-# '##' hiden function, alternative method
-# '#' comment
-
 def clean_bmi(x):
     if x == '-':
         return np.NaN
@@ -34,69 +19,6 @@ def clean_bp(bp):
 
 def get_age_group(age):
     return age_groups[(int(age/(group_size)))-1]
-
-def get_picname(x,y,hue,plot_type):
-    if hue == None:
-        return x +' vs '+ y +' '+ plot_type + '.png'
-    else:
-        return x +' vs '+ y +' controling '+ hue +' '+ plot_type +'.png'
-
-def plt_save_basic_plot(plot_type, data, x, y, hue, order, folder):
-    plt.figure()
-    if plot_type == 'boxplot':
-        ax = sns.boxplot(x= x, y = y, hue = hue, data = data, order = order)
-        ax.set_title(x+' vs '+y)
-        if hue != None:
-            ax.legend(loc='upper right', title=None)
-    elif plot_type == 'swarmplot':
-        sns.swarmplot(x = x, y = y, hue = hue, data = data, order = order)
-    fname = os.path.join(folder, get_picname(x,y,hue,plot_type))
-    plt.savefig(fname, dpi=300)
-
-def plt_save_bp_plot(plot_type, data, x, y, hue, order, folder):
-    plt.figure()
-    if plot_type == 'boxplot':
-        ax = sns.boxplot(x= x, y = y, hue = hue, data = data, order = order)
-        ax.set_title(x + ' vs ' + y)
-        ax.set(ylabel=y + ' [mmHg]')
-        if hue != None:
-            ax.legend(loc='upper right', title=None)
-        if y == 'BP Diastolic':
-            plt.plot([-1,5],[90,90],'--', linewidth = 0.5)
-        elif y == 'BP Systolic':
-            plt.plot([-1,6],[140,140],'--', linewidth = 0.5)
-        plt.plot([-1,6],[90,90],'--', linewidth = 0.5)
-    elif plot_type == 'swarmplot':
-        sns.swarmplot(x = x, y = y, hue = hue, data = data, order = order)
-    fname = os.path.join(folder, get_picname(x,y,hue,plot_type))
-    plt.savefig(fname, dpi=300)
-
-def get_basic_plots(data,folder): # BP Diastolic, BP Systolic
-    plt_save_basic_plot('boxplot', data, 'Age Group','BMI', None,
-                    age_groups, folder)
-    plt_save_basic_plot('boxplot', data, 'Gender','BMI', None,
-                    None, folder)
-    plt_save_basic_plot('swarmplot', data, 'Age Group','BMI', 'Gender',
-                    age_groups, folder)
-    plt_save_basic_plot('boxplot', data, 'Age Group','BMI', 'Gender',
-                    age_groups, folder)
-
-def get_plots_for_bp(data,folder,diastolic, systolic):
-    plt_save_bp_plot('boxplot', data, 'Age Group', diastolic,
-                    None, age_groups, folder)
-    plt_save_bp_plot('boxplot', data, 'Age Group',systolic,
-                    None, age_groups, folder)
-    plt_save_bp_plot('boxplot', data, 'Age Group',diastolic,
-                    'Gender', age_groups, folder)
-    plt_save_bp_plot('boxplot', data, 'Age Group',systolic,
-                    'Gender', age_groups,folder)
-
-def get_plots_for_lab(data,folder,lab):
-    plt_save_basic_plot('boxplot', data, 'Age Group', lab,
-                    None, age_groups, folder)
-    plt_save_basic_plot('boxplot', data, 'Age Group',lab,
-                    'Gender', age_groups, folder)
-
 
 def get_baseline_bp(patient_number):
     ## baseline bp is the bp on the day when  hypertension was detected
@@ -162,6 +84,7 @@ def map_como_status(df):
     df['Dyslipidaemia'] =  dyslip_predia['Dyslipidaemia']
     df['Pre-Diabetes'] =  dyslip_predia['Pre-Diabetes']
 
+### make direction for figures:
 def mkdir(dirname):
    if not os.path.exists(dirname):
        os.mkdir(dirname)
@@ -172,6 +95,7 @@ dirnames = ['figures_whole_group','figures_bp','figures_LDL-C',
 for d in dirnames:
     mkdir(d)
 
+### import data:
 # build df_vital from sheet 'Vitals', df as basic dataframe
 ## ip for input, op for outout
 ip = 'random_data.xlsx'
@@ -191,9 +115,10 @@ como = como.rename(index = como['Patient no.'])
 lab = pd.read_excel(ip, sheet_name='Lab', skiprows = 3)
 
 # build df_drugs for Drugs
-# drugs = pd.read_excel(excel_name, sheet_name = 'Drugs',skiprows=3)
+# drugs = pd.read_excel(ip, sheet_name = 'Drugs',skiprows=3)
 
-# clean data with unit, clean bp in df_vital
+### clean data:
+# clean data with unit, clean bp in vitals
 vitals['BP Diastolic'] = vitals['BP Diastolic'].apply(clean_bp)
 vitals['BP Systolic'] = vitals['BP Systolic'].apply(clean_bp)
 
@@ -218,32 +143,15 @@ sub_vitals['Age Group'] = sub_vitals['Age'].apply(get_age_group)
 sub_vitals['BP Diastolic'] = sub_vitals['BP Diastolic'].apply(clean_bp)
 sub_vitals['BP Systolic'] = sub_vitals['BP Systolic'].apply(clean_bp)
 
-# plot and save all boxplots and scatterplots required
-get_basic_plots(sub_vitals, 'figures_whole_group')
-get_plots_for_bp(sub_vitals, 'figures_whole_group','BP Diastolic','BP Systolic')
-
-## Get no of patient whose BP is in certain range
-# c = 0 # c for count, i for patient no.
-# for i in range(1, len(df)+1):
-#     if sub_vitals['BP Diastolic'][i] < 90 :
-#         if sub_vitals['BP Systolic'][i] < 140:
-#             c +=1
-# print(c)
-
 ### add 'baseline_bp' as BP before drug from BP at hypertension detect date
 baseline_bp_all = sub_vitals['Patient no.'].apply(get_baseline_bp)
 sub_vitals = pd.concat([sub_vitals, baseline_bp_all], axis=1)
 
-# define BBP_notnull for patient whose BP before drug is recorded
+### define BBP_notnull for patient whose BP before drug is recorded
 bbp_notnull =  sub_vitals[sub_vitals['Baseline Systolic'].notnull()]
 
-# plot and save all boxplots and scatterplots required
-get_basic_plots(bbp_notnull, 'figures_bp')
-get_plots_for_bp(bbp_notnull, 'figures_bp','BP Diastolic','BP Systolic')
-get_plots_for_bp(bbp_notnull, 'figures_bp','Baseline Diastolic',
-                'Baseline Systolic')
-
-# plot grouped boxplot to compare BP before and after drug
+### build dataframe contain both baseline and latest bp for further comparision
+# BP record: baseline bp or latest bp
 baseline_bp = bbp_notnull.copy()
 baseline_bp['BP record'] = 'Baseline BP'
 baseline_bp['BP Diastolic'] = baseline_bp['Baseline Diastolic']
@@ -251,12 +159,6 @@ baseline_bp['BP Systolic'] = baseline_bp['Baseline Systolic']
 latest_bp = bbp_notnull.copy()
 latest_bp['BP record'] = 'Latest BP'
 baseline_and_latest_bp = baseline_bp.append(latest_bp)
-
-# Plot boxplots to compare baseline BP and present BP
-plt_save_bp_plot('boxplot', baseline_and_latest_bp, 'Age Group', 'BP Diastolic',
-                 'BP record', age_groups, 'figures_bp')
-plt_save_bp_plot('boxplot', baseline_and_latest_bp, 'Age Group', 'BP Systolic',
-                 'BP record', age_groups, 'figures_bp')
 
 ### add variable 'ldl'
 ldl = get_df_for_lab('LDL-C')
@@ -272,21 +174,15 @@ ldl_notnull = ldl_notnull.rename(columns = {'Test Result (Numeric)':'Latest LDL'
 # add basic info for ldl_notnull
 map_age_gender_bmi(ldl_notnull)
 
-# basic plot: distribution
-get_basic_plots(ldl_notnull, 'figures_LDL-C')
-get_plots_for_lab(ldl_notnull,'figures_LDL-C','Baseline LDL')
-get_plots_for_lab(ldl_notnull,'figures_LDL-C','Latest LDL')
-
-# plots for ldl: comparision with baseline
+### build dataframe contain both baseline and latest bp for further comparision
+# LDL record : baseline or latest
 baseline_ldl = ldl_notnull.copy()
 baseline_ldl['LDL'] = baseline_ldl['Baseline LDL']
-baseline_ldl['LDL Type'] = 'Baseline'
+baseline_ldl['LDL Record'] = 'Baseline'
 latest_ldl = ldl_notnull.copy()
 latest_ldl['LDL'] = latest_ldl['Latest LDL']
-latest_ldl['LDL Type'] = 'Latest'
+latest_ldl['LDL Record'] = 'Latest'
 baseline_and_latest_ldl = baseline_ldl.append(latest_ldl)
-plt_save_basic_plot('boxplot', baseline_and_latest_ldl, 'Age Group', 'LDL',
-                 'LDL Type', age_groups, 'figures_LDL-C')
 
 ### add variable 'hba1c'
 hba1c = get_df_for_lab('HbA1c')
@@ -301,10 +197,6 @@ hba1c_notnull = hba1c_notnull.rename(columns = {'Test Result (Numeric)':'Latest 
 # add basic info for hba1c_notnull
 map_age_gender_bmi(hba1c_notnull)
 
-#basic plot: distribution
-get_basic_plots(hba1c_notnull, 'figures_hba1c')
-get_plots_for_lab(hba1c_notnull,'figures_hba1c','Latest HbA1c')
-
 ### add variable 'glucose'
 glucose = get_df_for_lab('Glucose, Fasting, pl')
 # sub_glucose: drop duplicates
@@ -317,82 +209,42 @@ glucose_notnull = glucose_notnull.rename(columns = {'Test Result (Numeric)':'Lat
 # add basic info for glucose_notnull
 map_age_gender_bmi(glucose_notnull)
 
-#basic plot: distribution
-get_basic_plots(glucose_notnull, 'figures_glucose')
-get_plots_for_lab(glucose_notnull,'figures_glucose','Latest Glucose')
-
-
-### Build predictive model for improvement in BP
-# input: age, gender, baseline_bp, dyslipidaemia, prediabetes
-# simple logistic regression
-
-# prepare train data
+### Create a Pandas dataframe for regission model
 bp_notnull = bbp_notnull[bbp_notnull['BP Diastolic'].notnull()]
 train_data = bp_notnull.copy()
 map_como_status(train_data)
 train_data['Diastolic Improvement'] = train_data['BP Diastolic'] - train_data['Baseline Diastolic']
 train_data['Systolic Improvement'] = train_data['BP Systolic'] - train_data['Baseline Systolic']
 
-
 cols = ['Age','Gender','Baseline Diastolic','Baseline Systolic',
         'Dyslipidaemia','Pre-Diabetes']
-x = train_data[cols]
-x['Dyslipidaemia'] = x['Dyslipidaemia'].apply(lambda i: int(i))
-x['Pre-Diabetes'] = x['Pre-Diabetes'].apply(lambda i: int(i))
-y = train_data['Diastolic Improvement']
+
+train_data['Dyslipidaemia'] = train_data['Dyslipidaemia'].apply(lambda i: int(i))
+train_data['Pre-Diabetes'] = train_data['Pre-Diabetes'].apply(lambda i: int(i))
+# y = train_data['Diastolic Improvement']
 
 dummy_fields = ['Gender']
 for each in dummy_fields:
-    dummies = pd.get_dummies(x.loc[:, each], prefix=each )
-    x = pd.concat( [x, dummies], axis = 1 )
+    dummies = pd.get_dummies(train_data.loc[:, each], prefix=each )
+    train_data = pd.concat( [train_data, dummies], axis = 1 )
 
-fields_to_drop = ['Gender']
-x = x.drop(fields_to_drop, axis = 1)
+BP_improvement = pd.DataFrame(train_data)
+fields_to_drop = ['Polyclinic Code','Visit Code','Height','Weight',
+                    'DOB','Age Group','Gender']
+BP_improvement = BP_improvement.drop(fields_to_drop, axis = 1)
 
-model1 = LinearRegression(copy_X=True)
-model2 = RandomForestRegressor(max_depth=3, random_state=0)
-model3 = XGBRegressor()
-model4 = LGBMRegressor()
-models = [model1, model2, model3, model4]
-model_names = []
-scores2 = {}
-for m in models:
-    model_names.append(m.__class__.__name__)
-    scores2[m.__class__.__name__] = {}
-## there are two methods to cross validate. First method only gives you there
-## the score, but does not give you a trained model. It is used for understanding
-## the problem - which predictors and which models work better
-# sklearn provides a function cross_val_score for this
-# scores1 = {} # scores1 is scores by method 1
-# for i in range(len(models)):
-#     scores1[i] = cross_val_score(models[i], x, y,
-#                                 scoring='neg_mean_squared_error', cv=5)
-#
-# for i in range(len(models)):
-#     print('{}: {}'.format(models[i].__class__.__name__, scores1[i]))
+# Create a Pandas Excel writer using XlsxWriter as the engine.
+writer = pd.ExcelWriter('edited_data.xlsx', engine='xlsxwriter')
 
-## method 2 involves going through train and test splis one by one
-## sklearn provides a class KFold to help with that
-kf = KFold(n_splits=5, shuffle=True)
-# scores2= pd.DataFrame(np.zeros((4,5)), columns = model_names)
-# models_collection = pd.DataFrame({},columns = model_names)
+# Convert the dataframe to an XlsxWriter Excel object.
+sub_vitals.to_excel(writer, sheet_name='Latest Vitals')
+bbp_notnull.to_excel(writer, sheet_name='Baseline BP')
+baseline_and_latest_bp.to_excel(writer, sheet_name='BP Comparision')
+ldl_notnull.to_excel(writer, sheet_name='Latest LDL-C Test')
+baseline_and_latest_ldl.to_excel(writer, sheet_name='LDL-C Comparision')
+hba1c_notnull.to_excel(writer, sheet_name='HbAc1 Test')
+glucose_notnull.to_excel(writer, sheet_name='Glucose Test')
+BP_improvement.to_excel(writer, sheet_name='BP Improvement')
 
-for n, (train_index, test_index) in enumerate(kf.split(x)):
-    ## we will make n models, one for each fold
-    x_train, x_test = x.iloc[train_index], x.iloc[test_index]
-    y_train, y_test = y.iloc[train_index], y.iloc[test_index]
-    for i in range(len(models)):
-        model = models[i]
-        model.fit(x_train, y_train)
-        y_pred = model.predict(x_test)
-        this_score = mean_squared_error(y_test, y_pred)
-        scores2[model_names[i]][n] = this_score
-        # models_collection[model_names[i]].append(model)
-scores2 = pd.DataFrame(scores2)
-
-## now we have n models which can be used for future data,
-## and average of outputs of these models can be used as the prediction
-
-# etl.py (extract, transform, load) -? take raw data and prepare processed data
-# descriptive_analysis.py -> genrates tables and charts
-# predictive_models.py ->
+# Close the Pandas Excel writer and output the Excel file.
+writer.save()
