@@ -233,18 +233,28 @@ fields_to_drop = ['Polyclinic Code','Visit Code','Height','Weight',
                     'DOB','Age Group','Gender']
 BP_improvement = BP_improvement.drop(fields_to_drop, axis = 1)
 
-# Create a Pandas Excel writer using XlsxWriter as the engine.
-writer = pd.ExcelWriter('edited_data.xlsx', engine='xlsxwriter')
+# # Create a Pandas Excel writer using XlsxWriter as the engine.
+# writer = pd.ExcelWriter('edited_data.xlsx', engine='xlsxwriter')
+#
+# # Convert the dataframe to an XlsxWriter Excel object.
+# sub_vitals.to_excel(writer, sheet_name='Latest Vitals')
+# bbp_notnull.to_excel(writer, sheet_name='Baseline BP')
+# baseline_and_latest_bp.to_excel(writer, sheet_name='BP Comparision')
+# ldl_notnull.to_excel(writer, sheet_name='Latest LDL-C Test')
+# baseline_and_latest_ldl.to_excel(writer, sheet_name='LDL-C Comparision')
+# hba1c_notnull.to_excel(writer, sheet_name='HbAc1 Test')
+# glucose_notnull.to_excel(writer, sheet_name='Glucose Test')
+# BP_improvement.to_excel(writer, sheet_name='BP Improvement')
+#
+# # Close the Pandas Excel writer and output the Excel file.
+# writer.save()
 
-# Convert the dataframe to an XlsxWriter Excel object.
-sub_vitals.to_excel(writer, sheet_name='Latest Vitals')
-bbp_notnull.to_excel(writer, sheet_name='Baseline BP')
-baseline_and_latest_bp.to_excel(writer, sheet_name='BP Comparision')
-ldl_notnull.to_excel(writer, sheet_name='Latest LDL-C Test')
-baseline_and_latest_ldl.to_excel(writer, sheet_name='LDL-C Comparision')
-hba1c_notnull.to_excel(writer, sheet_name='HbAc1 Test')
-glucose_notnull.to_excel(writer, sheet_name='Glucose Test')
-BP_improvement.to_excel(writer, sheet_name='BP Improvement')
 
-# Close the Pandas Excel writer and output the Excel file.
-writer.save()
+store = pd.HDFStore('edited_df.h5')
+df_names = ['Latest Vitals','Baseline BP','BP Comparision','Latest LDL-C Test',
+        'LDL-C Comparision','HbAc1 Test','Glucose Test','BP Improvement']
+dfs = [sub_vitals,bbp_notnull,baseline_and_latest_bp,ldl_notnull,
+        baseline_and_latest_ldl,hba1c_notnull,glucose_notnull,BP_improvement]
+
+for i in range(len(dfs)):
+    store[df_names[i]] = dfs[i]
