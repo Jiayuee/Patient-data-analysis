@@ -16,8 +16,8 @@ from lightgbm import LGBMRegressor
 # simple logistic regression
 
 # prepare train data
-ip = "edited_data.xlsx"
-train_data = pd.read_excel(ip,sheet_name="BP Improvement")
+ip = "edited_data.h5"
+train_data = pd.read_hdf(ip,"BP Improvement",'r+')
 
 cols = ['Age','Gender_Female','Gender_Male','Baseline Diastolic','Baseline Systolic',
         'Dyslipidaemia','Pre-Diabetes']
