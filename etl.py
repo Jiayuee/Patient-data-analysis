@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
-import xlsxwriter
+
 from pandas import DataFrame
 
 def clean_bmi(x):
@@ -98,7 +98,8 @@ for d in dirnames:
 ### import data:
 # build df_vital from sheet 'Vitals', df as basic dataframe
 ## ip for input, op for outout
-ip = 'random_data.xlsx'
+ip = 'SR181549 Summary anonymized.xlsx'
+
 vitals = pd.read_excel(ip, sheet_name='Vitals', skiprows=3)
 sub_vitals = vitals.drop_duplicates(subset=['Patient no.'], keep = 'last')
 sub_vitals = sub_vitals.rename(index = sub_vitals['Patient no.'])
@@ -250,11 +251,11 @@ BP_improvement = BP_improvement.drop(fields_to_drop, axis = 1)
 # writer.save()
 
 
-store = pd.HDFStore('edited_df.h5')
-df_names = ['Latest Vitals','Baseline BP','BP Comparision','Latest LDL-C Test',
-        'LDL-C Comparision','HbAc1 Test','Glucose Test','BP Improvement']
-dfs = [sub_vitals,bbp_notnull,baseline_and_latest_bp,ldl_notnull,
+op = pd.HDFStore('edited_data.h5')
+df_names = ['total_disease_record','Latest_Vitals','Baseline_BP','BP_Comparision','Latest_LDLC_Test',
+        'LDLC_Comparision','HbAc1_Test','Glucose_Test','BP_Improvement']
+dfs = [vitals,sub_vitals,bbp_notnull,baseline_and_latest_bp,ldl_notnull,
         baseline_and_latest_ldl,hba1c_notnull,glucose_notnull,BP_improvement]
 
 for i in range(len(dfs)):
-    store[df_names[i]] = dfs[i]
+    op[df_names[i]] = dfs[i]
