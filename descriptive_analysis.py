@@ -71,14 +71,16 @@ def get_plots_for_lab(data,folder,lab):
                     'Gender', age_groups, folder)
 
 ### import data
-ip = 'edited_data.xlsx'
-sub_vitals = pd.read_excel(ip, sheet_name='Latest Vitals')
-bbp_notnull = pd.read_excel(ip, sheet_name='Baseline BP')
-baseline_and_latest_bp = pd.read_excel(ip, sheet_name='BP Comparision')
-ldl_notnull = pd.read_excel(ip, sheet_name='Latest LDL-C Test')
-baseline_and_latest_ldl = pd.read_excel(ip, sheet_name='LDL-C Comparision')
-hba1c_notnull = pd.read_excel(ip, sheet_name='HbAc1 Test')
-glucose_notnull = pd.read_excel(ip, sheet_name='Glucose Test')
+ip = 'edited_data.h5'
+df = pd.read_hdf(ip,'total_disease_record','r+')
+
+sub_vitals = pd.read_hdf(ip, 'Latest_Vitals','r+')
+bbp_notnull = pd.read_hdf(ip, 'Baseline_BP','r+')
+baseline_and_latest_bp = pd.read_hdf(ip, 'BP_Comparision','r+')
+ldl_notnull = pd.read_hdf(ip, 'Latest_LDLC_Test','r+')
+baseline_and_latest_ldl = pd.read_hdf(ip, 'LDLC_Comparision','r+')
+hba1c_notnull = pd.read_hdf(ip, 'HbAc1_Test','r+')
+glucose_notnull = pd.read_hdf(ip, 'Glucose_Test','r+')
 
 age_groups = ['20-40 years old', '40-60 years old',
                 '60-80 years old', '80-100 years old']
